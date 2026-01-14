@@ -6,6 +6,7 @@
 
 
 
+
 // Sets default values for this component's properties
 UMyGrenadeComponent::UMyGrenadeComponent()
 {
@@ -15,6 +16,11 @@ UMyGrenadeComponent::UMyGrenadeComponent()
 	//Spline = CreateDefaultSubobject<USplineComponent>(TEXT("GrenadeSpline"));
 	//Spline->SetMobility(EComponentMobility::Movable);
 	
+	AActor* Owner = GetOwner();
+	if (!Owner) return;
+
+	USceneComponent* Root = Owner->GetRootComponent();
+	// Root를 기준으로 위치 계산만 가능
 	
 	// ...
 }
@@ -24,7 +30,7 @@ UMyGrenadeComponent::UMyGrenadeComponent()
 void UMyGrenadeComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
+	/*1230
 	if (!Spline)
 	{
 		Spline = NewObject<USplineComponent>(GetOwner());
@@ -39,8 +45,8 @@ void UMyGrenadeComponent::BeginPlay()
 			);
 		}
 	}
-
-	
+	*/
+	/*1230
 	Spline->SetVisibility(true);
 	Spline->SetHiddenInGame(false);
 	// ...
@@ -62,6 +68,26 @@ void UMyGrenadeComponent::BeginPlay()
 
 		SplineMeshPool.Add(Mesh);
 	}
+	*/
+	
+
+	if (!TrajectoryNiagara)
+	{
+		TrajectoryNiagara = NewObject<UNiagaraComponent>(GetOwner());
+		TrajectoryNiagara->RegisterComponent();
+
+		TrajectoryNiagara->AttachToComponent(
+			GetOwner()->GetRootComponent(),
+			FAttachmentTransformRules::KeepRelativeTransform
+		);
+
+		TrajectoryNiagara->SetAutoActivate(true);
+
+		if (TrajectoryNiagaraSystem)
+		{
+			TrajectoryNiagara->SetAsset(TrajectoryNiagaraSystem);
+		}
+	}
 
 	bshow = false;
 	
@@ -82,9 +108,7 @@ void UMyGrenadeComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 
 void UMyGrenadeComponent::RayGrenade(const FVector Start, const FVector Forward, float Distance)
 {
-	//Spline->SetVisibility(true);
-	//Spline->SetHiddenInGame(false);
-
+	
 	FPredictProjectilePathParams Params;
 	FPredictProjectilePathResult Result;
 
@@ -92,17 +116,9 @@ void UMyGrenadeComponent::RayGrenade(const FVector Start, const FVector Forward,
 	FRotator PitchRot = FRotator(CurrentPitch, 0.f, 0.f);
 	// Forward를 Pitch만큼 회전
 	FVector NewForward = PitchRot.RotateVector(Forward);
-	/*
-	//debug
-	FVector LaunchVel = NewForward * 700.f;
-	GEngine->AddOnScreenDebugMessage(
-		-1,
-		2.0f,
-		FColor::Red,
-		LaunchVel.ToString()
-	);
-	*/
-	Params.StartLocation = Start + Forward * 30.f;;
+	FVector testStartlocation = Start + Forward * 30.f;
+
+	Params.StartLocation = Start + Forward * 30.f;
 	Params.LaunchVelocity = NewForward * 700.f;
 	Params.bTraceWithCollision = true;
 	Params.ProjectileRadius = 5.f;
@@ -120,22 +136,33 @@ void UMyGrenadeComponent::RayGrenade(const FVector Start, const FVector Forward,
 	);
 	
 	//Grenade 기준 Transform
-	const FTransform GrenadeTransform = GetOwner()->GetActorTransform();
+	//const FTransform GrenadeTransform = GetOwner()->GetActorTransform();
 
-	Spline->ClearSplinePoints();
+	//new--
+	Points.Reset();
 
-	for (int i = 0; i < Result.PathData.Num(); i++)
+	for (auto& P : Result.PathData)
 	{
-		const FVector WorldPos = Result.PathData[i].Location;
-		// World -> Grenade(Local)
-		const FVector LocalPos = GrenadeTransform.InverseTransformPosition(WorldPos);
-
-		Spline->AddSplinePoint(
-			LocalPos,
-			ESplineCoordinateSpace::Local
-		);
-
+		Points.Add(P.Location);
 	}
+
+	TrajectoryNiagara->Deactivate();
+	TrajectoryNiagara->Activate(true); // Reset
+
+	TrajectoryNiagara->SetVariableInt(
+		TEXT("UserPointCount"),
+		Points.Num()
+	);
+
+	//Niagara로 배열 전달
+	UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayVector(
+		TrajectoryNiagara,
+		TEXT("UserPoints"),
+		Points
+	);
+
+	
+	/*
 	//디버그
 	for (int32 i = 0; i < Result.PathData.Num() - 1; i++)
 	{
@@ -150,37 +177,10 @@ void UMyGrenadeComponent::RayGrenade(const FVector Start, const FVector Forward,
 			3.f
 		);
 	}
-
-	Spline->UpdateSpline();
-	/*
-	GEngine->AddOnScreenDebugMessage(
-		-1,            // -1 = 새 줄 (BP Print String 기본 동작)
-		2.0f,          // 화면에 표시될 시간
-		FColor::Yellow,
-		TEXT("spline end")
-	);
 	*/
-	const int32 SegmentCount = Spline->GetNumberOfSplinePoints() - 1;
-
-	for (int32 i = 0; i < SplineMeshPool.Num(); i++)
-	{
-		if (i < SegmentCount)
-		{
-			FVector StartPos, StartTan, EndPos, EndTan;
-			Spline->GetLocationAndTangentAtSplinePoint(i, StartPos, StartTan, ESplineCoordinateSpace::Local);
-			Spline->GetLocationAndTangentAtSplinePoint(i + 1, EndPos, EndTan, ESplineCoordinateSpace::Local);
-
-			
-
-			SplineMeshPool[i]->SetStartAndEnd(StartPos, StartTan, EndPos, EndTan,true);
-			SplineMeshPool[i]->SetVisibility(true);
-		}
-		else
-		{
-			SplineMeshPool[i]->SetVisibility(false);
-		}
-	}
-
+	
+	//진짜 던진다??
+	
 	
 	
 }
@@ -195,4 +195,6 @@ void UMyGrenadeComponent::SetWheelVal(float val)
 	CurrentPitch += val;
 	CurrentPitch = FMath::Clamp(CurrentPitch, -60.f, 60.f);
 }
+
+
 

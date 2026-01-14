@@ -16,12 +16,7 @@ AWeaponBase::AWeaponBase()
 
 	//총구방향 설정
 	MuzzlePoint = CreateDefaultSubobject<USceneComponent>(TEXT("muzzlepoint"));
-	//MuzzlePoint->SetupAttachment(RootComponent);
-	//MuzzlePoint->SetRelativeLocation(FVector(100.f, 0.f, 10.f));
-
-	//FVector Start = WeaponMesh->GetSocketLocation(TEXT("muzzleSocket"));
-	//FVector Forward = WeaponMesh->GetSocketRotation(TEXT("muzzleSocket")).Vector()*1000.f;
-
+	
 }
 
 // Called when the game starts or when spawned

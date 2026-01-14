@@ -14,9 +14,16 @@
 #include "Kismet/GameplayStatics.h"
 #include "MyGrenade.h"
 #include "TypeWeapon.h"
+#include "Bullet.h"
+#include "GrenadeThrowCalculateCompo.h"
+#include "MyServer.h"
+#include "Components/SceneCaptureComponent2D.h"
+#include "Engine/CanvasRenderTarget2D.h"
+#include "PaperSpriteComponent.h"
 
 #include "WeaponComponent.h"
 #include "MyCharacter.generated.h"
+
 
 
 
@@ -46,7 +53,8 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
     virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
-        
+    void spawnActor(FServerBulletPos pos);
+    virtual void OnRep_Controller() override;
 protected:
     // =============== Input System 관련 UPROPERTY 변수들 ===============
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
@@ -65,6 +73,8 @@ protected:
     UInputAction* FireAction;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
     UInputAction* ChangeLookAction;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+    UInputAction* FirstWeaponAction;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
     UInputAction* SecondWeaponAction;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
@@ -100,6 +110,12 @@ protected:
     AWeaponBase* Weapon;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
     AActor* SubItem;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ViewPoint")
+    FVector2D ScreenCenter;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ViewPoint")
+    APlayerController* PC;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Myserver")
+    UMyServer* MyServer;
 
     //총기 조준점
     UPROPERTY(EditDefaultsOnly, Category = "AIMUI")
@@ -113,16 +129,33 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
     TSubclassOf<AMyGrenade> GrenadeClass;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+    TSubclassOf<ABullet> BulletClass;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+    TSubclassOf<AMyEnemy> EnermyClass;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
     UWeaponComponent* WeaponComponent;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "WeaponRay")
     FHitResult BulletRayResult;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+    UGrenadeThrowCalculateCompo* GrenadeCalComponent;
+
     
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "HP")
     float CurrentHp;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
     EWeaponType CurrentWeapon;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
+    int32 bulletId;
     
+    UPROPERTY(VisibleAnywhere, Category = "MinimapCamera")
+    class USpringArmComponent* minimapCameraBoom;
+    UPROPERTY(VisibleAnywhere, Category = "MinimapCamera")
+    class USceneCaptureComponent2D* minimapCapture;
+    UPROPERTY(VisibleAnywhere, Category = "MinimapCamera")
+    class UPaperSpriteComponent* minimapSprite;
+
+    int32 test;
 
     // 애니메이션 블루프린트에 필요한 데이터를 업데이트하는 함수 (Tick에서 호출)
     void UpdateAnimationVariables();
@@ -139,7 +172,11 @@ protected:
     void CrouchingEnd();
     void CrouchMove(const FInputActionValue& Value);
     void ChangeLook();
+    void ChangeFirstWeapon();
     void ChangeSecondWeapon();
     void MouseWheel(const FInputActionValue& Value);
     AWeaponBase* GetWeaponBase();
+    UAimWidget* GetPlayerUI();
+    void InitScreenCenter();
+    
 };

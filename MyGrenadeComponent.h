@@ -5,6 +5,10 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Components/SplineComponent.h"
+#include "NiagaraComponent.h"
+#include "NiagaraSystem.h"
+#include "NiagaraDataInterfaceArrayFunctionLibrary.h"
+
 
 #include "Components/SplineMeshComponent.h"
 #include "MyGrenadeComponent.generated.h"
@@ -25,19 +29,26 @@ protected:
 
 public:	
 	// Called every frame
-	UPROPERTY()
-	USplineComponent* Spline;
+	//UPROPERTY()
+	//USplineComponent* Spline;
 
-	UPROPERTY()
-	TArray<USplineMeshComponent*> SplineMeshPool;
+	//UPROPERTY()
+	//TArray<USplineMeshComponent*> SplineMeshPool;
 
 	UPROPERTY(EditDefaultsOnly)
 	int32 MaxSplineMeshes = 10;
 
 	// 선으로 쓸 메시 (에디터에서 지정)
-	UPROPERTY(EditAnywhere, Category = "Grenade|Spline")
-	UStaticMesh* LineMesh;
+	//UPROPERTY(EditAnywhere, Category = "Grenade|Spline")
+	//UStaticMesh* LineMesh;
 
+	UPROPERTY(EditAnywhere, Category = "Grenade|Spline")
+	UNiagaraComponent* TrajectoryNiagara;
+	UPROPERTY(EditAnywhere, Category = "Grenade|Spline")
+	UNiagaraSystem* TrajectoryNiagaraSystem;
+
+	UPROPERTY()
+	TArray<FVector> Points;
 	//틱기반 렌더를 위한 bool
 	UPROPERTY()
 	bool bshow;

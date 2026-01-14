@@ -3,10 +3,17 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
+#include <GameFramework/ProjectileMovementComponent.h>
+#include <Components/SphereComponent.h>
+#include "MyGrenadeGo.h"
+#include "TimerManager.h"
+#include <Kismet/GameplayStatics.h>
+#include <NiagaraFunctionLibrary.h>
 
 #include "MyGrenadeComponent.h"
 #include "MyGrenade.generated.h"
+
+
 
 
 UCLASS(Blueprintable)
@@ -29,15 +36,28 @@ public:
 	
 	void ThrowWheelVal(float val);
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Grenade")
-	UStaticMesh* GrenadeAsset;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grenade")
-	UStaticMeshComponent* GrenadeMesh;
+	void Throw(const FVector& Direction, float Power);
+
+	UFUNCTION()
+	void Explode();
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grenade")
 	UMyGrenadeComponent* grenadeCompo;
-
 	
-
 	
+	// 구체 콜리전 컴포넌트입니다.
+	UPROPERTY(VisibleDefaultsOnly, Category = "Grenade")
+	USphereComponent* CollisionComponent;
+
+
+	//new
+	UPROPERTY(VisibleDefaultsOnly, Category = "Grenade")
+	UStaticMeshComponent* StaticGrenadeMesh;
+
+	FTimerHandle ExplosionTimerHandle;
+
+
+	UPROPERTY(EditDefaultsOnly, Category = "EffectNiagara")
+	UNiagaraSystem* GrenadeImpactEffect;
 
 };

@@ -13,6 +13,18 @@ void UAimWidget::SetAim(bool state)
     gap = state;    
 }
 
+void UAimWidget::SetCurrentHp(float amount)
+{
+
+    CurrentHp -= amount;
+    if (CurrentHp < 0) {
+        CurrentHp = 0;
+    }
+
+    Percent = CurrentHp / MaxHp;
+    ProgressBar->SetPercent(Percent);
+}
+
 
 
 

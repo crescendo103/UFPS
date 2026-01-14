@@ -6,10 +6,11 @@
 #include "Blueprint/UserWidget.h"
 #include "Components/Border.h"
 
-
+#include <Components/ProgressBar.h>
 #include "Components/CanvasPanelSlot.h"
 
 #include "AimWidget.generated.h"
+
 
 /**
  * 
@@ -35,6 +36,14 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Crosshair")
     bool gap = false;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hp")
+    float CurrentHp = 100.f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hp")
+    float MaxHp = 100.f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hp")
+    float Percent = 100.f;
+
+
     UPROPERTY(Transient)
     UCanvasPanelSlot* Left_crosshairSlote;
     UPROPERTY(Transient)
@@ -44,12 +53,13 @@ public:
     UPROPERTY(Transient)
     UCanvasPanelSlot* Bottom_crosshairSlot;
 
-
+    UPROPERTY(meta = (BindWidget))
+    UProgressBar* ProgressBar;
 
     // C++에서 호출할 함수
     void SetTargetGap(float NewGap);
     void SetAim(bool state);
-    
+    void SetCurrentHp(float amount);
 
 protected:
     virtual void NativeConstruct() override;

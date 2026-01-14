@@ -3,6 +3,7 @@
 
 #include "MyGrenade.h"
 
+
 // Sets default values
 AMyGrenade::AMyGrenade()
 {
@@ -10,19 +11,36 @@ AMyGrenade::AMyGrenade()
 
 
 	PrimaryActorTick.bCanEverTick = true;
-	GrenadeMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("GrenadeMesh"));
-	SetRootComponent(GrenadeMesh);
+	
+	StaticGrenadeMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("hi"));
+	//  Physics 설정
+	StaticGrenadeMesh->SetSimulatePhysics(true);
+	StaticGrenadeMesh->SetEnableGravity(true);
 
-	if (GrenadeAsset)
-	{
-		GrenadeMesh->SetStaticMesh(GrenadeAsset);
-	}
+	//  Collision 설정
+	StaticGrenadeMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	StaticGrenadeMesh->SetCollisionProfileName(TEXT("PhysicsActor"));
+
+	RootComponent = StaticGrenadeMesh;
 
 	
+	
+	// 구체를 단순 콜리전 표현으로 사용합니다.
+	CollisionComponent = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComponent"));
+	// 구체의 콜리전 반경을 설정합니다.
+	CollisionComponent->InitSphereRadius(15.0f);
+
+	CollisionComponent->SetSimulatePhysics(false);                 // 물리 시뮬 X
+	CollisionComponent->SetNotifyRigidBodyCollision(true);        // Hit 이벤트 ON
+	CollisionComponent->SetGenerateOverlapEvents(false);          // 필요 없으면 OFF
+	CollisionComponent->SetupAttachment(StaticGrenadeMesh);
 
 	grenadeCompo = CreateDefaultSubobject<UMyGrenadeComponent>(TEXT("gre"));
 	
 
+	
+	
+	
 }
 
 // Called when the game starts or when spawned
@@ -30,21 +48,16 @@ void AMyGrenade::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	
 }
 
 // Called every frame
 void AMyGrenade::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	/*
-	if (bShow && grenadeCompo)
-	{
-		grenadeCompo->RayGrenade(
-			GetActorLocation(),
-			GetActorForwardVector(),
-			100.f
-		);
-	}*/
+	
+	
+
 }
 
 void AMyGrenade::ThrowGrenade()
@@ -68,4 +81,44 @@ void AMyGrenade::ThrowWheelVal(float val)
 
 
 
+
+
+void AMyGrenade::Throw(const FVector& Direction, float Power)
+{
+	FVector Velocity = Direction * Power;
+
+	//UStaticMeshComponent* Mesh = GetMesh();
+	///StaticGrenadeMesh->SetSimulatePhysics(true);
+
+	// 속도 직접 설정
+	StaticGrenadeMesh->SetPhysicsLinearVelocity(Velocity);
+
+	// 또는 임펄스
+	// Mesh->AddImpulse(Velocity * Mesh->GetMass());
+
+	// 3초 후 폭발 예약
+	GetWorldTimerManager().SetTimer(
+		ExplosionTimerHandle,
+		this,
+		&AMyGrenade::Explode,
+		3.0f,
+		false
+	);
+
+}
+
+void AMyGrenade::Explode()
+{
+	if (GrenadeImpactEffect)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			GetWorld(),
+			GrenadeImpactEffect,
+			GetActorLocation(),
+			GetActorRotation()
+		);
+	}
+
+	Destroy();
+}
 
