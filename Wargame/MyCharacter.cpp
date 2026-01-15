@@ -259,21 +259,22 @@ void AMyCharacter::Tick(float DeltaTime)
     FVector ForwardDir = GetActorForwardVector();//바라보는방향
     FVector Location = GetCharacterMovement()->GetActorLocation();//위치
 
-    FServerBullet Bullet;
-    Bullet.Header = 2;//사람
-    Bullet.BulletId = -100;//쓰레기값
-    Bullet.X = Location.X;//100.f;
-    Bullet.Y = Location.Y;//200.f;
-    Bullet.Z = Location.Z;//300.f;
-    Bullet.DirX = ForwardDir.X;//1.f;
-    Bullet.DirY = ForwardDir.Y;//0.f;
-    Bullet.DirZ = ForwardDir.Z;//0.f;
-    Bullet.Speed = Speed;
-    Bullet.Sendtime = FPlatformTime::Seconds();
-    Bullet.flag = false;
+    FCharacterPacket man;
+    man.Header.Type = (int32)EPacketType::Character;
+    man.Header.Size = sizeof(FCharacterPacket);
+    man.CharacterId = -1;//쓰레기값
+    man.X = Location.X;//100.f;
+    man.Y = Location.Y;//200.f;
+    man.Z = Location.Z;//300.f;
+    man.DirX = ForwardDir.X;//1.f;
+    man.DirY = ForwardDir.Y;//0.f;
+    man.DirZ = ForwardDir.Z;//0.f;
+    man.Speed = Speed;
+    man.Sendtime = FPlatformTime::Seconds();
+    //Bullet.flag = false;
     
     if (MyServer) {
-        MyServer->MoveClient(Bullet);
+        MyServer->MoveClient(man);
     }
    
 }
@@ -466,7 +467,8 @@ void AMyCharacter::StartFire()
         FVector StartPos = Weapon->GetGunStartLocation();
         FVector Dir = PC->GetControlRotation().Vector();
         FServerBullet Bullet;
-        Bullet.Header = 1;
+        Bullet.Header.Type = (int32)EPacketType::Bullet;
+        Bullet.Header.Size = sizeof(FServerBullet);        
         Bullet.BulletId = -1;//쓰레기값
         Bullet.X = StartPos.X;//100.f;
         Bullet.Y = StartPos.Y;//200.f;
@@ -643,7 +645,7 @@ float AMyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 
     return DamageAmount;
 }
-
+/*
 void AMyCharacter::spawnActor(FServerBulletPos pos)
 {
     if (BulletClass)
@@ -659,12 +661,7 @@ void AMyCharacter::spawnActor(FServerBulletPos pos)
         SpawnParams.Instigator = GetInstigator();//이 무기를 스폰한 주체가 누군지
         SubItem = GetWorld()->SpawnActor<ABullet>(BulletClass, SpawnTransform, SpawnParams);
 
-        /*
-        ABullet* Bullet = Cast<ABullet>(SubItem);
-        FVector start = Weapon->GetGunStartLocation();
-        FVector end = (PC->GetControlRotation().Vector()) + start;
-        FVector Direction = end - start;
-        Bullet->ShootBullet(Direction);
-        */
+        
     }
 }
+*/

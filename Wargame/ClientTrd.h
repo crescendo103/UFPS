@@ -24,7 +24,8 @@ public:
 	// 소켓 변수
 	void* Socket;
 	bool bRun;
-	TQueue<FServerBulletPos, EQueueMode::Mpsc>* RecvQueue;
+	TQueue<FServerBullet, EQueueMode::Mpsc>* BulletQueue;
+	TQueue<FCharacterPacket, EQueueMode::Mpsc>* CharacterQueue;
 private:
 	// 쓰레드
 	FRunnableThread* Thread;

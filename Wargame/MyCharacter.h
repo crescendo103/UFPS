@@ -53,7 +53,7 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
     virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
-    void spawnActor(FServerBulletPos pos);
+    //void spawnActor(FServerBullet pos);
     virtual void OnRep_Controller() override;
 protected:
     // =============== Input System 관련 UPROPERTY 변수들 ===============
@@ -156,6 +156,10 @@ protected:
     class UPaperSpriteComponent* minimapSprite;
 
     int32 test;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+    int32 PlayerID;
+    
 
     // 애니메이션 블루프린트에 필요한 데이터를 업데이트하는 함수 (Tick에서 호출)
     void UpdateAnimationVariables();

@@ -27,12 +27,13 @@ public:
 	virtual TStatId GetStatId() const override;
 	
 
-	void MoveClient(const FServerBullet& bullet);
+	void MoveClient(FCharacterPacket bullet);
 	void Shotoccurred(const FServerBullet& bullet);
 	void SetThreadSocketHandle();//쓰레드 생성
 	void SpawnActor();
 	void SetBulletClass(TSubclassOf<ABullet> blueprint);
 	void SetEnermyClass(TSubclassOf<AMyEnemy> blueprint);
+	void CheckMyOwner(FVector pos, int32 id);
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	TSubclassOf<ABullet> BulletClass;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
@@ -53,6 +54,8 @@ private:
 	//AMyCharacter* MyChar;
 	ClientTrd* ClientThread;
 	FTimerHandle ServerTimer;
+	int32 MyOwner;
+	bool IsSetMyOwner;
 	//bool IsSpawned;
 	
 };

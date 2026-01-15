@@ -27,12 +27,15 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	void SetSPD(float speed, FVector position, FVector direction);
 	
+
 	UPROPERTY(BlueprintReadOnly, Category = "Anim")
 	float CurrentSpeed;
 	UPROPERTY(BlueprintReadOnly, Category = "Anim")
 	FVector Position;
 	UPROPERTY(BlueprintReadOnly, Category = "Anim")
 	FVector Direction;
+	UPROPERTY(BlueprintReadOnly, Category = "Anim")
+	FVector CharacterId;
 	
 	
 };
