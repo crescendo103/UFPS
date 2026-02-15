@@ -16,7 +16,7 @@
  * 
  */
 UCLASS()
-class WARGAME_API UAimWidget : public UUserWidget
+class FPS_API UAimWidget : public UUserWidget
 {
 	GENERATED_BODY()
 	
@@ -37,7 +37,7 @@ public:
     bool gap = false;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hp")
-    float CurrentHp = 100.f;
+    float CurrentHp = 80.f;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hp")
     float MaxHp = 100.f;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hp")
@@ -52,14 +52,14 @@ public:
     UCanvasPanelSlot* Top_crosshairSlot;
     UPROPERTY(Transient)
     UCanvasPanelSlot* Bottom_crosshairSlot;
-
+    /*
     UPROPERTY(meta = (BindWidget))
     UProgressBar* ProgressBar;
-
+    */
     // C++에서 호출할 함수
     void SetTargetGap(float NewGap);
     void SetAim(bool state);
-    void SetCurrentHp(float amount);
+    //void SetCurrentHp(float amount);
 
 protected:
     virtual void NativeConstruct() override;

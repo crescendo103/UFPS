@@ -20,6 +20,12 @@
 #include "Components/SceneCaptureComponent2D.h"
 #include "Engine/CanvasRenderTarget2D.h"
 #include "PaperSpriteComponent.h"
+#include "WatingRoom.h"
+#include "MyInventory.h"
+#include "VisualGrenade.h"
+#include "WD_HPBar.h"
+#include "Engine/DamageEvents.h"
+#include "AIEnemy.h"
 
 #include "WeaponComponent.h"
 #include "MyCharacter.generated.h"
@@ -33,9 +39,10 @@ class UInputMappingContext;
 class UInputAction;
 class USpringArmComponent; // 스프링 암 컴포넌트 추가
 class UCameraComponent;    // 카메라 컴포넌트 추가
-
+class AHelicopter;
+class UPawnManager;
 UCLASS()
-class WARGAME_API AMyCharacter : public ACharacter
+class FPS_API AMyCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
@@ -55,7 +62,15 @@ public:
     virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
     //void spawnActor(FServerBullet pos);
     virtual void OnRep_Controller() override;
-protected:
+
+    UFUNCTION()
+    void OnOverlapWithItem(AActor* OverlappedActor, AActor* OtherActor);
+    UFUNCTION()
+    void OnOverlapEndWithItem(AActor* OverlappedActor, AActor* OtherActor);
+    AVisualGrenade* GetVisualGrenadePointer();
+    void WeaponAttach(AActor* weapon, FName sockname);
+
+public:
     // =============== Input System 관련 UPROPERTY 변수들 ===============
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
     UInputMappingContext* DefaultMappingContext;
@@ -79,7 +94,12 @@ protected:
     UInputAction* SecondWeaponAction;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
     UInputAction* MouseWheelAction;
-
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+    UInputAction* InventoryAction;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+    UInputAction* InterAction;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+    UInputAction* TestAction;
     
 
     // 새로운 컴포넌트들을 UPROPERTY로 선언
@@ -103,6 +123,10 @@ protected:
     bool bIsJumping;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Animation")
     bool bIsFirstPerson;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Animation")
+    bool bIsHealKit;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Animation")
+    bool bIsHanging;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SocketName")
     FName GunSocket;
@@ -110,6 +134,8 @@ protected:
     AWeaponBase* Weapon;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
     AActor* SubItem;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
+    AVisualGrenade* VisualGrenade;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ViewPoint")
     FVector2D ScreenCenter;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ViewPoint")
@@ -118,12 +144,24 @@ protected:
     UMyServer* MyServer;
 
     //총기 조준점
-    UPROPERTY(EditDefaultsOnly, Category = "AIMUI")
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
     TSubclassOf<UUserWidget> AimWidgetClass;//블루프린트 위젯 설계도
     UPROPERTY()
     class UAimWidget* AimWidget;
     //UUserWidget* AimWidget;//실제로 만들어진 객체
     //
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
+    TSubclassOf<UWD_HPBar> HPBarClass;//블루프린트 위젯 설계도
+    UPROPERTY()
+    class UWD_HPBar* HpBarWidget;
+
+
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
+    TSubclassOf<UMyInventory> InventoryWidgetClass;//블루프린트 위젯 설계도
+    UPROPERTY()
+    UMyInventory* InventoryWidget;
+
+
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
     TSubclassOf<AWeaponBase> WeaponClass;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
@@ -131,7 +169,13 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
     TSubclassOf<ABullet> BulletClass;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+    TSubclassOf<AVisualGrenade> VisualGrenadeClass;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
     TSubclassOf<AMyEnemy> EnermyClass;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+    TSubclassOf<AAIEnemy> AIClass;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+    TSubclassOf<UWatingRoom> WatingRoomClass;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
     UWeaponComponent* WeaponComponent;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "WeaponRay")
@@ -160,9 +204,16 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     int32 PlayerID;
     
+    UPROPERTY()
+    TArray<AActor*> Items;
+
+    //타이머 핸들 선언
+    FTimerHandle ExplosionTimerHandle;
+    bool IsInventoryActive;
 
     // 애니메이션 블루프린트에 필요한 데이터를 업데이트하는 함수 (Tick에서 호출)
     void UpdateAnimationVariables();
+    
     
 
     // =============== Input Action 바인딩될 함수들 ===============
@@ -182,5 +233,32 @@ protected:
     AWeaponBase* GetWeaponBase();
     UAimWidget* GetPlayerUI();
     void InitScreenCenter();
-    
+    void CameraLineTrace();
+
+    void InventoryActive();
+    void InterActionRayCast();
+   
+    void PossessedBy(AController* NewController)override;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Heli")
+    TSubclassOf<AHelicopter> HeliClass;
+
+    UPROPERTY()
+    UPawnManager* PM;
+
+    void PullDownHeli();
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
+    AActor* Parachute;
+
+    void SetParachuteActor(AActor* actor);
+
+    virtual void Landed(const FHitResult& Hit) override;
+    void DetachParachute();
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Heli")
+    TSubclassOf<AActor> ParachuteClass;
+
+    void SetPlayerID(int32 id);
+    int32 GetPlayerID();
 };

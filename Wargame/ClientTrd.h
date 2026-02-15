@@ -9,10 +9,11 @@
 /**
  * 
  */
-class WARGAME_API ClientTrd : public FRunnable
+class UMyServer;
+class FPS_API ClientTrd : public FRunnable
 {
 public:
-	ClientTrd(void* InSocket);
+	ClientTrd(void* InSocket, UMyServer* InServer);
 	~ClientTrd();
 
 	// 상속받은 세개의 함수
@@ -24,8 +25,17 @@ public:
 	// 소켓 변수
 	void* Socket;
 	bool bRun;
+	bool successConnect;
 	TQueue<FServerBullet, EQueueMode::Mpsc>* BulletQueue;
 	TQueue<FCharacterPacket, EQueueMode::Mpsc>* CharacterQueue;
+	TQueue<FInformationTextPacket, EQueueMode::Mpsc>* TimeInformationQueue;
+	TQueue<FGrenadePacket, EQueueMode::Mpsc>* GrenadeQueue;
+	TQueue<FSpawnAIPacket, EQueueMode::Mpsc>* AISpawnQueue;
+	TQueue<FDamagePacket, EQueueMode::Mpsc>* DmgQueue;
+
+	UMyServer* Server;
+
+	TMap<int32, FServerBullet> BulletMap;
 private:
 	// 쓰레드
 	FRunnableThread* Thread;

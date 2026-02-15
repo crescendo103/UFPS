@@ -5,14 +5,20 @@
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include "MyServer.h"
 #include "Windows/HideWindowsPlatformTypes.h"
 
-ClientTrd::ClientTrd(void* InSocket)
-	: Socket(InSocket)
+ClientTrd::ClientTrd(void* InSocket, UMyServer* InServer)
+	: Socket(InSocket), Server(InServer)
 {
 	bRun = true;
+	successConnect = false;
 	BulletQueue = new TQueue<FServerBullet, EQueueMode::Mpsc>();
 	CharacterQueue = new TQueue<FCharacterPacket, EQueueMode::Mpsc>();
+	TimeInformationQueue = new TQueue<FInformationTextPacket, EQueueMode::Mpsc>();
+	GrenadeQueue = new TQueue<FGrenadePacket, EQueueMode::Mpsc>();
+	AISpawnQueue = new TQueue<FSpawnAIPacket, EQueueMode::Mpsc>();
+	DmgQueue = new TQueue<FDamagePacket, EQueueMode::Mpsc>();
 	Thread = FRunnableThread::Create(this, TEXT("Network Thread"));
 	//RecvQueue = new TQueue<FServerBulletPos, EQueueMode::Mpsc>();
 	
@@ -93,6 +99,8 @@ uint32 ClientTrd::Run()
 			}
 
 			BulletQueue->Enqueue(Bullet);
+			Server->SetBulletPacket(Bullet);
+			
 			break;
 		}
 
@@ -120,6 +128,131 @@ uint32 ClientTrd::Run()
 			}
 
 			CharacterQueue->Enqueue(Character);
+			Server->SetCharacterPacket(Character);
+			//
+			successConnect = true;
+			break;
+		}
+		case EPacketType::InformationText:
+		{
+			FInformationTextPacket TimePacket;
+			TimePacket.Header = Header;
+
+			int BodySize = sizeof(FInformationTextPacket) - sizeof(FPacketHeader);
+			int BodyReceived = 0;
+
+			while (BodyReceived < BodySize)
+			{
+				int Len = recv(Sock,
+					reinterpret_cast<char*>(&TimePacket) + sizeof(FPacketHeader) + BodyReceived,
+					BodySize - BodyReceived,
+					0);
+
+				if (Len <= 0)
+				{
+					UE_LOG(LogTemp, Error, TEXT("timetext recv failed"));
+					return 0;
+				}
+				BodyReceived += Len;
+			}
+
+			TimeInformationQueue->Enqueue(TimePacket);
+			//Server->StartCountdownByPacket();
+			AsyncTask(ENamedThreads::GameThread, [this]()
+				{
+					if (Server)
+					{
+						Server->StartCountdownByPacket();
+					}
+				});
+			break;
+		}
+		case EPacketType::Grenade:
+		{
+			FGrenadePacket Packet;
+			Packet.Header = Header;
+
+			int BodySize = sizeof(FGrenadePacket) - sizeof(FPacketHeader);
+			int BodyReceived = 0;
+
+			while (BodyReceived < BodySize)
+			{
+				int Len = recv(Sock,
+					reinterpret_cast<char*>(&Packet) + sizeof(FPacketHeader) + BodyReceived,
+					BodySize - BodyReceived,
+					0);
+
+				if (Len <= 0)
+				{
+					UE_LOG(LogTemp, Error, TEXT("grenade recv failed"));
+					return 0;
+				}
+				BodyReceived += Len;
+			}
+
+			GrenadeQueue->Enqueue(Packet);
+			
+			AsyncTask(ENamedThreads::GameThread, [this]()
+				{
+					if (Server)
+					{
+						Server->SpawnGrenade();
+					}
+				});
+			break;
+		}
+		case EPacketType::AiSpawn: {
+			FSpawnAIPacket AIPacket;
+			AIPacket.Header = Header;
+
+			int BodySize = sizeof(FSpawnAIPacket) - sizeof(FPacketHeader);
+			int BodyReceived = 0;
+
+			while (BodyReceived < BodySize)
+			{
+				int Len = recv(Sock,
+					reinterpret_cast<char*>(&AIPacket) + sizeof(FPacketHeader) + BodyReceived,
+					BodySize - BodyReceived,
+					0);
+
+				if (Len <= 0)
+				{
+					UE_LOG(LogTemp, Error, TEXT("AI Spawn recv failed"));
+					return 0;
+				}
+				BodyReceived += Len;
+			}
+
+			AISpawnQueue->Enqueue(AIPacket);
+			//Server->SetCharacterPacket(AIPacket);
+			//
+			//successConnect = true;
+			break;
+		}
+		case EPacketType::Damage: {
+			FDamagePacket DmgPacket;
+			DmgPacket.Header = Header;
+
+			int BodySize = sizeof(FDamagePacket) - sizeof(FPacketHeader);
+			int BodyReceived = 0;
+
+			while (BodyReceived < BodySize)
+			{
+				int Len = recv(Sock,
+					reinterpret_cast<char*>(&DmgPacket) + sizeof(FPacketHeader) + BodyReceived,
+					BodySize - BodyReceived,
+					0);
+
+				if (Len <= 0)
+				{
+					UE_LOG(LogTemp, Error, TEXT("Damage Spawn recv failed"));
+					return 0;
+				}
+				BodyReceived += Len;
+			}
+
+			DmgQueue->Enqueue(DmgPacket);
+			
 			break;
 		}
 

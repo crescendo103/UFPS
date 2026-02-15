@@ -1,9 +1,11 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "GrenadeThrowCalculateCompo.h"
 #include "Components/SplineComponent.h"
 #include <Kismet/GameplayStatics.h>
+#include "GameFramework/Character.h"
+#include "MyCharacter.h"
 
 // Sets default values for this component's properties
 UGrenadeThrowCalculateCompo::UGrenadeThrowCalculateCompo()
@@ -11,7 +13,7 @@ UGrenadeThrowCalculateCompo::UGrenadeThrowCalculateCompo()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
-	//½ºÇÃ¶óÀÎÀ» »ç¿ëÇÏ±âÀ§ÇØ »ı¼ºÇØÁÜ//
+	//ìŠ¤í”Œë¼ì¸ì„ ì‚¬ìš©í•˜ê¸°ìœ„í•´ ìƒì„±í•´ì¤Œ//
 	Spline_Path = CreateDefaultSubobject<USplineComponent>(TEXT("Spline_Path"));
 	bShow = false;
 	// ...
@@ -25,29 +27,44 @@ void UGrenadeThrowCalculateCompo::BeginPlay()
 	IgnoreActors.Add(GetOwner());
 	
 	{
-		/*
-		APawn* Pawn = Cast<APawn>(GetOwner());
-		if (!Pawn) return;
-
-		AController* Controller = Pawn->GetController();
-		PC = Cast<APlayerController>(Controller);
-		if (!PC) return;
-		*/
-		/*ÀÌ°É Æ½¸¶´ÙÇÏ¶ó°í?
-		APawn* Pawn = Cast<APawn>(GetOwner());
-		if (!Pawn || !Pawn->IsLocallyControlled())
-			return;
-
-		AController* Controller = Pawn->GetController();
-		PC = Cast<APlayerController>(Controller);
-
-		if (!PC)
-			return;
-		*/
+		
 	}
 	//UpdateSpline();
 	// ...
-	
+	AActor* Owner = GetOwner();
+	if (!Owner) return;
+
+	// ğŸ”¹ Decal ìƒì„±
+	CircleDecal = NewObject<UDecalComponent>(Owner, UDecalComponent::StaticClass(), TEXT("CircleDecal"));
+	if (!CircleDecal) return;
+
+	if (CircleDecal && CircleDecalMaterial)
+	{
+		CircleDecal->SetDecalMaterial(CircleDecalMaterial);
+	}
+	UE_LOG(LogTemp, Warning, TEXT("CircleDecalMaterial = %s"),
+		CircleDecalMaterial ? *CircleDecalMaterial->GetName() : TEXT("NULL"));
+
+	// ğŸ”¹ ì›”ë“œ ë“±ë¡ (ì´ê±° ì•ˆ í•˜ë©´ ì•ˆ ë³´ì„)
+	CircleDecal->RegisterComponent();
+
+	// ğŸ”¹ Owner Rootì— ë¶€ì°©
+	if (Owner->GetRootComponent())
+	{
+		CircleDecal->AttachToComponent(
+			Owner->GetRootComponent(),
+			FAttachmentTransformRules::KeepWorldTransform
+		);
+	}
+
+	// ğŸ”¹ ê¸°ë³¸ ì„¤ì •
+	CircleDecal->SetVisibility(false);
+	CircleDecal->DecalSize = FVector(128.f, 256.f, 256.f);
+	CircleDecal->SetRelativeRotation(FRotator(-90.f, 0.f, 0.f)); // ë°”ë‹¥ íˆ¬ì˜ìš©
+
+	IgnoreActors.Add(Owner);
+
+	MouseVal=0;
 }
 
 
@@ -65,8 +82,14 @@ void UGrenadeThrowCalculateCompo::TickComponent(float DeltaTime, ELevelTick Tick
 
 void UGrenadeThrowCalculateCompo::UpdateSplinePath()
 {
-	
-	//Àü¿¡ ÀúÀåµÇÀÖ´Âµ¥ ½ºÇÁ¶óÀÎ Æ÷ÀÎÆ®¸¦ ´Ù Áö¿ò//
+	/*
+	UE_LOG(LogTemp, Warning, TEXT("ì—…ë°ì´íŠ¸ìŠ¤í”Œë¼ì¸íŒ¨ìŠ¤"));
+	UE_LOG(LogTemp, Warning, TEXT("bShow = %d | Spline_Meshs.Num = %d"),
+		bShow,
+		Spline_Meshs.Num()
+	);
+	*/
+	//ì „ì— ì €ì¥ë˜ìˆëŠ”ë° ìŠ¤í”„ë¼ì¸ í¬ì¸íŠ¸ë¥¼ ë‹¤ ì§€ì›€//
 	Spline_Path->ClearSplinePoints(true);
 	if (Spline_Meshs.Num() > 0)
 	{
@@ -74,33 +97,39 @@ void UGrenadeThrowCalculateCompo::UpdateSplinePath()
 		{
 			if (Spline_Meshs[i])
 			{
-				//ÀúÀåµÈ ¹è¿­ÀÇ ¸Ş½ÃÄÄÆ÷³ÍÆ®¸¦ »èÁ¦ÇÏ¿© °è¼Ó Áö¼Ó½ÃÅ´//
+				//ì €ì¥ëœ ë°°ì—´ì˜ ë©”ì‹œì»´í¬ë„ŒíŠ¸ë¥¼ ì‚­ì œí•˜ì—¬ ê³„ì† ì§€ì†ì‹œí‚´//
 				//Spline_Meshs[i]->DetachFromParent();
 				Spline_Meshs[i]->DestroyComponent();
 			}
 		}
-		//¹è¿­À» »èÁ¦ÇÔ//
+		//ë°°ì—´ì„ ì‚­ì œí•¨//
 		Spline_Meshs.Empty();
 	}
 	
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////
-	//ÇÊ¿ä°ªµé//
+	//í•„ìš”ê°’ë“¤//
 	FHitResult OutHIt;
 	TArray<FVector> OutPathPositions;
 	FVector LastPosition;
 	///////////
 
-	//¶óÀÎÆ®·¹ÀÌ½º ½ÃÀÛÁ¡// ¼Õ¼ÒÄÏÀ§Ä¡·ÎÇÏÀÚ
-	AActor* Owner = GetOwner();
-	if (!Owner) return;
-
+	//ë¼ì¸íŠ¸ë ˆì´ìŠ¤ ì‹œì‘ì // ì†ì†Œì¼“ìœ„ì¹˜ë¡œí•˜ì
 	
-	//¶óÀÎÆ®·¹ÀÌ½º Á¶ÁØÁ¡//
-	/*
-	FVector EndPos = (PC->GetControlRotation().Vector()) + StartPos;
-	FVector ForwardVector = EndPos - StartPos;
-	*/
-	//ºñÈ¿À²ÀûÀÌ´Ù..
+	//ë¹„íš¨ìœ¨ì ì´ë‹¤..
+	//ACharacter* Character = Cast<ACharacter>(GetOwner());
+	//if (!Character) return;
+	ACharacter* Character =
+		Cast<ACharacter>(GetOwner());
+	if (!Character) return;
+
+	AMyCharacter* MyCharacter = Cast<AMyCharacter>(Character);
+	
+
+	USkeletalMeshComponent* Mesh = Character->GetMesh();
+	if (!Mesh) return;
+
+	FVector HandLocation = Mesh->GetSocketLocation("RightHandPinky4Socket");
+
 	APawn* Pawn = Cast<APawn>(GetOwner());
 	if (!Pawn || !Pawn->IsLocallyControlled())
 		return;
@@ -111,18 +140,37 @@ void UGrenadeThrowCalculateCompo::UpdateSplinePath()
 	if (!PC)
 		return;
 
-	FVector Direction = PC->GetControlRotation().Vector().GetSafeNormal();
+	//FVector Direction = Character->GetActorForwardVector();//PC->GetControlRotation().Vector().GetSafeNormal();
+	/*
+	FRotator ThrowRot = GetActorRotation();
+
+            // 2. ìœ„ / ì•„ë˜ ê°ë„ ì¶”ê°€ (Pitch)
+            ThrowRot.Pitch += VisualGrenade->AccumulateWheelVal;
+
+            // 3. íšŒì „ â†’ ë°©í–¥ ë²¡í„°
+            FVector Direction = ThrowRot.Vector().GetSafeNormal();
+	*/
+	// 1. ì•¡í„°ì˜ íšŒì „ê°’ ê°€ì ¸ì˜¤ê¸°
+	FRotator ThrowRot = Character->GetActorRotation();
+	//if (MyCharacter->GetVisualGrenadePointer()->GetDirty()) {
+		ThrowRot.Pitch += MyCharacter->GetVisualGrenadePointer()->AccumulateWheelVal;
+		// 2. ìœ„ / ì•„ë˜ ê°ë„ ì¶”ê°€ (Pitch)
+		
+		//MyCharacter->GetVisualGrenadePointer()->SetDirty(false);
+	//}
+	// 3. íšŒì „ â†’ ë°©í–¥ ë²¡í„°
+	FVector Direction = ThrowRot.Vector().GetSafeNormal();
 	FVector LaunchVelocity = Direction * 1000.f;
 
-	//¶óÀÎ Æ®·¹ÀÌ½º¸¦ ½÷ ±× ±æÀÇ °¢ Æ÷ÀÎÆ®ÁöÁ¡À» µû¶ó Spline¿¡ ÀúÀåÇØÁÜ//
-	bool isHit = UGameplayStatics::Blueprint_PredictProjectilePath_ByTraceChannel(GetWorld(), OutHIt, OutPathPositions, LastPosition, StartPos, LaunchVelocity, true, 10.f, ECollisionChannel::ECC_WorldStatic, false, IgnoreActors, EDrawDebugTrace::None, 15.f); 
+	//ë¼ì¸ íŠ¸ë ˆì´ìŠ¤ë¥¼ ì´ ê·¸ ê¸¸ì˜ ê° í¬ì¸íŠ¸ì§€ì ì„ ë”°ë¼ Splineì— ì €ì¥í•´ì¤Œ//
+	bool isHit = UGameplayStatics::Blueprint_PredictProjectilePath_ByTraceChannel(GetWorld(), OutHIt, OutPathPositions, LastPosition, HandLocation, LaunchVelocity, true, 10.f, ECollisionChannel::ECC_WorldStatic, false, IgnoreActors, EDrawDebugTrace::None, 15.f);
 	for (int i = 0; i < OutPathPositions.Num(); i++)
 	{
-		//Æ÷ÀÎÆ®ÁöÁ¡À» µû¶ó ÀúÀåÇØÁÜ//
+		//í¬ì¸íŠ¸ì§€ì ì„ ë”°ë¼ ì €ì¥í•´ì¤Œ//
 		Spline_Path->AddSplinePointAtIndex(OutPathPositions[i], i, ESplineCoordinateSpace::World);
 	}
 	
-	//ÀÌ°Å´Â Á¦°¡ ¸¸µç°Å¶ó ¿øÇÏ´Â State¸¦ ÀÌ¿ëÇÏ¿© º¸ÀÌ°ÔÇÏ°Å³ª ¾Èº¸ÀÌ°Ô ÇÒ°ÍÀÌ´Ù.//
+	//ì´ê±°ëŠ” ì œê°€ ë§Œë“ ê±°ë¼ ì›í•˜ëŠ” Stateë¥¼ ì´ìš©í•˜ì—¬ ë³´ì´ê²Œí•˜ê±°ë‚˜ ì•ˆë³´ì´ê²Œ í• ê²ƒì´ë‹¤.//
 	if (bShow)
 	{
 		
@@ -131,37 +179,37 @@ void UGrenadeThrowCalculateCompo::UpdateSplinePath()
 		for (int SplineCount = 0; SplineCount < (Spline_Path->GetNumberOfSplinePoints()) - 1; SplineCount++)
 		{
 			USplineMeshComponent* SplineMeshComponent = NewObject<USplineMeshComponent>(this, USplineMeshComponent::StaticClass());
-			//¸¸¾à ½Ç¸°ÅÍ¸Ş½¬¸¦ »ç¿ëÇÒ‹š ¸Ş½¬¸¦ XÀÌ Á¤¸éÀÌ¶ó °¡Á¤ÇÏ¸é ZÃàÀ¸·Î µÚÁı¾î¼­ Á¤¸éÀ¸·Î ¹Ù²Ş(¸¸¾à ¹Ú½º¸¸ ÀÌ¿ëÇÒ°æ¿ì »ç¿ë ¾ÈÇØµµµÊ.)// 
+			//ë§Œì•½ ì‹¤ë¦°í„°ë©”ì‰¬ë¥¼ ì‚¬ìš©í• ë–„ ë©”ì‰¬ë¥¼ Xì´ ì •ë©´ì´ë¼ ê°€ì •í•˜ë©´ Zì¶•ìœ¼ë¡œ ë’¤ì§‘ì–´ì„œ ì •ë©´ìœ¼ë¡œ ë°”ê¿ˆ(ë§Œì•½ ë°•ìŠ¤ë§Œ ì´ìš©í• ê²½ìš° ì‚¬ìš© ì•ˆí•´ë„ë¨.)// 
 			SplineMeshComponent->SetForwardAxis(ESplineMeshAxis::Z);
 			SplineMeshComponent->SetStaticMesh(DefalutMesh);
-			//Á¤Àû ¿òÁ÷ÀÓ//
+			//ì •ì  ì›€ì§ì„//
 			SplineMeshComponent->SetMobility(EComponentMobility::Movable);
 			SplineMeshComponent->CreationMethod = EComponentCreationMethod::UserConstructionScript;
-			//¿ùµå¿¡ µî·ÏÇØÁÜ//
+			//ì›”ë“œì— ë“±ë¡í•´ì¤Œ//
 			SplineMeshComponent->RegisterComponentWithWorld(GetWorld());
-			//½ºÇÃ¶óÀÎ ÄÄÆ÷³ÍÆ®¿¡ ÄÄÆ÷³ÍÆ®¿¡ µû¶ó Å©±â À§Ä¡¸¦ º¯°æÇÔ//
+			//ìŠ¤í”Œë¼ì¸ ì»´í¬ë„ŒíŠ¸ì— ì»´í¬ë„ŒíŠ¸ì— ë”°ë¼ í¬ê¸° ìœ„ì¹˜ë¥¼ ë³€ê²½í•¨//
 			SplineMeshComponent->AttachToComponent(Spline_Path, FAttachmentTransformRules::KeepRelativeTransform);
 			SplineMeshComponent->SetStartScale(FVector2D(UKismetSystemLibrary::MakeLiteralFloat(0.1f), UKismetSystemLibrary::MakeLiteralFloat(0.1f)));
 			SplineMeshComponent->SetEndScale(FVector2D(UKismetSystemLibrary::MakeLiteralFloat(0.1f), UKismetSystemLibrary::MakeLiteralFloat(0.1f)));
 
-			//½ÃÀÛÁöÁ¡//
+			//ì‹œì‘ì§€ì //
 			const FVector StartPoint = Spline_Path->GetLocationAtSplinePoint(SplineCount, ESplineCoordinateSpace::Local);
 			const FVector StartTangent = Spline_Path->GetTangentAtSplinePoint(SplineCount, ESplineCoordinateSpace::Local);
 			const FVector EndPoint = Spline_Path->GetLocationAtSplinePoint(SplineCount + 1, ESplineCoordinateSpace::Local);
 			const FVector EndTangent = Spline_Path->GetTangentAtSplinePoint(SplineCount + 1, ESplineCoordinateSpace::Local);
 			SplineMeshComponent->SetStartAndEnd(StartPoint, StartTangent, EndPoint, EndTangent, true);
 
-			//¸Ş½¬¿¡ Ãæµ¹ÇÒ°ÍÀÎÁö ¾Æ´ÑÁöÈ®ÀÎÇÔ(ÀÏ´ÜÀº ¾ÈÇÔ)//
+			//ë©”ì‰¬ì— ì¶©ëŒí• ê²ƒì¸ì§€ ì•„ë‹Œì§€í™•ì¸í•¨(ì¼ë‹¨ì€ ì•ˆí•¨)//
 			SplineMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-			//¸Ş½¬´Â ²À¾Æ·¡¿¡´Ù ÇØÁà¾ßÇÑ´Ù.//
+			//ë©”ì‰¬ëŠ” ê¼­ì•„ë˜ì—ë‹¤ í•´ì¤˜ì•¼í•œë‹¤.//
 			if (DefaultMaterial)
 			{
 				SplineMeshComponent->SetMaterial(0, DefaultMaterial);
 			}
 			////////////////////////////////
 
-			//¸Ş½¬ÀÇ À§Ä¡¸¦ ÀúÀåÇØÁÜ//
+			//ë©”ì‰¬ì˜ ìœ„ì¹˜ë¥¼ ì €ì¥í•´ì¤Œ//
 			Spline_Meshs.Add(SplineMeshComponent);
 		}
 		CircleDecal->SetVisibility(true);
@@ -172,13 +220,13 @@ void UGrenadeThrowCalculateCompo::UpdateSplinePath()
 	{
 		/*
 		GEngine->AddOnScreenDebugMessage(
-			-1,            // -1 = »õ ÁÙ (BP Print String ±âº» µ¿ÀÛ)
-			2.0f,          // È­¸é¿¡ Ç¥½ÃµÉ ½Ã°£
+			-1,            // -1 = ìƒˆ ì¤„ (BP Print String ê¸°ë³¸ ë™ì‘)
+			2.0f,          // í™”ë©´ì— í‘œì‹œë  ì‹œê°„
 			FColor::Yellow,
 			TEXT("novision")
 		);
 		*/
-		//À§¿¡ÀÖ´Â State°¡ falseÀÏ°æ¿ì¿¡´Â °è¼Ó ¾Èº¸ÀÌ°Ô ¼³Á¤ÇØÁÜ//
+		//ìœ„ì—ìˆëŠ” Stateê°€ falseì¼ê²½ìš°ì—ëŠ” ê³„ì† ì•ˆë³´ì´ê²Œ ì„¤ì •í•´ì¤Œ//
 		Spline_Path->ClearSplinePoints(true);
 		if (Spline_Meshs.Num() > 0)
 		{
@@ -205,6 +253,11 @@ void UGrenadeThrowCalculateCompo::SetStartPos(FVector position)
 void UGrenadeThrowCalculateCompo::SetbShow(bool state)
 {
 	bShow = state;
+}
+
+void UGrenadeThrowCalculateCompo::SetMouseVal(float val)
+{
+	MouseVal += val;
 }
 
 

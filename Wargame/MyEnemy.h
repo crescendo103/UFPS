@@ -4,10 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+
 #include "MyEnemy.generated.h"
 
+
+class UMyServer;
+
 UCLASS()
-class WARGAME_API AMyEnemy : public ACharacter
+class FPS_API AMyEnemy : public ACharacter
 {
 	GENERATED_BODY()
 
@@ -25,8 +29,10 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	void SetSPD(float speed, FVector position, FVector direction);
-	
+	void SetSPD(float speed, FVector position, FVector direction, bool isjump, bool isfire);
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+	void SetIgnoreCharacterId(int id);
+	int GetIgnoreCharacterId();
 
 	UPROPERTY(BlueprintReadOnly, Category = "Anim")
 	float CurrentSpeed;
@@ -36,6 +42,12 @@ public:
 	FVector Direction;
 	UPROPERTY(BlueprintReadOnly, Category = "Anim")
 	FVector CharacterId;
+	UPROPERTY(BlueprintReadOnly, Category = "Anim")
+	bool IsJump;
+	UPROPERTY(BlueprintReadOnly, Category = "Anim")
+	bool IsFire;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Myserver")
+	UMyServer* MyServer;
 	
-	
+	int IgnoreCharacterID;
 };

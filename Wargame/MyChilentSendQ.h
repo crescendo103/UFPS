@@ -7,7 +7,7 @@
 /**
  * 
  */
-class WARGAME_API MyChilentSendQ
+class FPS_API MyChilentSendQ
 {
 public:
 	MyChilentSendQ();

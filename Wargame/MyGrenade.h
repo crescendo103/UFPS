@@ -10,6 +10,13 @@
 #include <Kismet/GameplayStatics.h>
 #include <NiagaraFunctionLibrary.h>
 
+#include "VoxelWorld.h"
+#include "VoxelTools/Gen/VoxelSphereTools.h"
+
+#include "GeometryCollection/GeometryCollectionComponent.h"
+
+
+
 #include "MyGrenadeComponent.h"
 #include "MyGrenade.generated.h"
 
@@ -17,7 +24,7 @@
 
 
 UCLASS(Blueprintable)
-class WARGAME_API AMyGrenade : public AActor
+class FPS_API AMyGrenade : public AActor
 {
 	GENERATED_BODY()
 	
@@ -38,6 +45,9 @@ public:
 
 	void Throw(const FVector& Direction, float Power);
 
+	
+
+	void ExplodeVoxel(FVector ExplosionCenter, float ExplosionRadius);
 	UFUNCTION()
 	void Explode();
 
@@ -60,4 +70,14 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "EffectNiagara")
 	UNiagaraSystem* GrenadeImpactEffect;
 
+	// 수정할 VoxelWorld (블루프린트에서 지정 가능)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel")
+	AVoxelWorld* TargetVoxelWorld;
+
+	
+	UFUNCTION()
+	void OnHitSphere(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+
+
+	bool bSticked = false;
 };

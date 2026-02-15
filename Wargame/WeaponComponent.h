@@ -15,7 +15,7 @@ class UNiagaraSystem;
 class UNiagaraComponent;
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class WARGAME_API UWeaponComponent : public UActorComponent
+class FPS_API UWeaponComponent : public UActorComponent
 {
 	GENERATED_BODY()
 

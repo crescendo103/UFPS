@@ -15,7 +15,7 @@
 
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class WARGAME_API UMyGrenadeComponent : public UActorComponent
+class FPS_API UMyGrenadeComponent : public UActorComponent
 {
 	GENERATED_BODY()
 

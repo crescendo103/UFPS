@@ -1,7 +1,9 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Bullet.h"
+#include "SoundComponent.h"
+#include "MyCharacter.h"
 
 // Sets default values
 ABullet::ABullet()
@@ -10,38 +12,48 @@ ABullet::ABullet()
 	PrimaryActorTick.bCanEverTick = true;
 	
 
-	// ±¸Ã¼¸¦ ´Ü¼ø Äİ¸®Àü Ç¥ÇöÀ¸·Î »ç¿ëÇÕ´Ï´Ù.
+	// êµ¬ì²´ë¥¼ ë‹¨ìˆœ ì½œë¦¬ì „ í‘œí˜„ìœ¼ë¡œ ì‚¬ìš©í•©ë‹ˆë‹¤.
 	CollisionComponent = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComponent"));
-	// ±¸Ã¼ÀÇ Äİ¸®Àü ¹İ°æÀ» ¼³Á¤ÇÕ´Ï´Ù.
+	// êµ¬ì²´ì˜ ì½œë¦¬ì „ ë°˜ê²½ì„ ì„¤ì •í•©ë‹ˆë‹¤.
 	CollisionComponent->InitSphereRadius(15.0f);
-	// ·çÆ® ÄÄÆ÷³ÍÆ®¸¦ Äİ¸®Àü ÄÄÆ÷³ÍÆ®·Î ¼³Á¤ÇÕ´Ï´Ù.
+	// ë£¨íŠ¸ ì»´í¬ë„ŒíŠ¸ë¥¼ ì½œë¦¬ì „ ì»´í¬ë„ŒíŠ¸ë¡œ ì„¤ì •í•©ë‹ˆë‹¤.
 	RootComponent = CollisionComponent;
-	CollisionComponent->SetCollisionProfileName(TEXT("Bull"));//ÀÌ°Å ÀÛµ¿¾ÈÇÏ´Â°Å°°Àºµ¥...
+	CollisionComponent->SetCollisionProfileName(TEXT("Bull"));//ì´ê±° ì‘ë™ì•ˆí•˜ëŠ”ê±°ê°™ì€ë°...
 
 
 	StaticBulletMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BulletMesh"));
 	StaticBulletMesh->SetupAttachment(CollisionComponent);
-	StaticBulletMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision); // Áß¿ä!
+	StaticBulletMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision); // ì¤‘ìš”!
 	StaticBulletMesh->SetMobility(EComponentMobility::Movable);
 
-	// ÀÌ ÄÄÆ÷³ÍÆ®¸¦ »ç¿ëÇÏ¿© ÀÌ ÇÁ·ÎÁ§Å¸ÀÏÀÇ ¹«ºê¸ÕÆ®¸¦ ±¸µ¿½ÃÅµ´Ï´Ù.
+	// ì´ ì»´í¬ë„ŒíŠ¸ë¥¼ ì‚¬ìš©í•˜ì—¬ ì´ í”„ë¡œì íƒ€ì¼ì˜ ë¬´ë¸Œë¨¼íŠ¸ë¥¼ êµ¬ë™ì‹œí‚µë‹ˆë‹¤.
 
 	PojectileCompo = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovementComponent"));
 	PojectileCompo->InitialSpeed = 3000.f;
 	PojectileCompo->MaxSpeed = 3000.f;
 	
-	//PojectileCompo->ProjectileGravityScale = 0.f; // Áß·Â ¹«½Ã
-	/** ¼Óµµ¿¡ µû¸¥ ·ÎÅ×ÀÌ¼Ç º¯È­ X */
+	//PojectileCompo->ProjectileGravityScale = 0.f; // ì¤‘ë ¥ ë¬´ì‹œ
+	/** ì†ë„ì— ë”°ë¥¸ ë¡œí…Œì´ì…˜ ë³€í™” X */
 	PojectileCompo->bRotationFollowsVelocity = false;
-	/** ¹Ù¿î½º X */
+	/** ë°”ìš´ìŠ¤ X */
 	PojectileCompo->bShouldBounce = false;
 	PojectileCompo->Bounciness = 0.3f;
 	//CollisionComponent->SetCollisionProfileName(TEXT("BlockAll"));
 	PojectileCompo->SetUpdatedComponent(CollisionComponent);
-	PojectileCompo->Activate();//ÀÌ°Å ¹«Á¶°ÇÀÖ¾î¾ßÇÏ³ªºÁ
+	PojectileCompo->Activate();//ì´ê±° ë¬´ì¡°ê±´ìˆì–´ì•¼í•˜ë‚˜ë´
 
-	CollisionComponent->OnComponentHit.AddDynamic(this, &ABullet::OnHitSphere); //ÀÏ´Ü ÀÓ½Ã·Î Â÷´Ü...
+	CollisionComponent->OnComponentHit.AddDynamic(this, &ABullet::OnHitSphere); //ì¼ë‹¨ ì„ì‹œë¡œ ì°¨ë‹¨...
 
+	// Audio
+	BulletAudio = CreateDefaultSubobject<USoundComponent>(TEXT("BulletAudio"));
+	BulletAudio->SetupAttachment(RootComponent);
+	BulletAudio->bAutoActivate = false; // ìë™ ì¬ìƒ ë”
+
+}
+
+void ABullet::SetBulletOwner(int32 owner)
+{
+	BulletOwner = owner;
 }
 
 // Called when the game starts or when spawned
@@ -58,14 +70,14 @@ void ABullet::Tick(float DeltaTime)
 
 	DrawDebugSphere(
 		GetWorld(),
-		CollisionComponent->GetComponentLocation(), // Äİ¸®Àü Áß½É
-		CollisionComponent->GetScaledSphereRadius(), // Äİ¸®Àü ¹İ°æ
-		12, // ¼¼±×¸ÕÆ® ¼ö (¿øÇü ¸Å²ô·´°Ô)
-		FColor::Red, // »ö»ó
-		false, // Áö¼Ó½Ã°£ (false = 1ÇÁ·¹ÀÓ¸¸, true = Persistent)
-		-1.f, // Áö¼Ó½Ã°£
-		0, // ±íÀÌ ¿ì¼± Ç¥½Ã ¿É¼Ç
-		2.f // ¼± µÎ²²
+		CollisionComponent->GetComponentLocation(), // ì½œë¦¬ì „ ì¤‘ì‹¬
+		CollisionComponent->GetScaledSphereRadius(), // ì½œë¦¬ì „ ë°˜ê²½
+		12, // ì„¸ê·¸ë¨¼íŠ¸ ìˆ˜ (ì›í˜• ë§¤ë„ëŸ½ê²Œ)
+		FColor::Red, // ìƒ‰ìƒ
+		false, // ì§€ì†ì‹œê°„ (false = 1í”„ë ˆì„ë§Œ, true = Persistent)
+		-1.f, // ì§€ì†ì‹œê°„
+		0, // ê¹Šì´ ìš°ì„  í‘œì‹œ ì˜µì…˜
+		2.f // ì„  ë‘ê»˜
 	);
 }
 
@@ -87,7 +99,7 @@ void ABullet::SetBulletId(int32 id)
 void ABullet::OnHitSphere(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
 
-	//µğ¹ö±×
+	//ë””ë²„ê·¸
 	FString ActorName = OtherActor ? OtherActor->GetName() : TEXT("None");
 	FString CompName = OtherComp ? OtherComp->GetName() : TEXT("None");
 
@@ -104,52 +116,88 @@ void ABullet::OnHitSphere(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
 		GetWorld(),
 		BulletImpactEffect,
-		Hit.ImpactPoint,                    //  ¸ÂÀº ÁöÁ¡
-		Hit.ImpactNormal.Rotation()          //  Ç¥¸é ¹æÇâ¿¡ ¸Â°Ô È¸Àü
+		Hit.ImpactPoint,                    //  ë§ì€ ì§€ì 
+		Hit.ImpactNormal.Rotation()          //  í‘œë©´ ë°©í–¥ì— ë§ê²Œ íšŒì „
 	);
 
-	// Äİ¸®Àü Ã¤³Î Ã¼Å©
+
+	UGameplayStatics::ApplyDamage(Hit.GetActor(), 10, nullptr, nullptr, UDamageType::StaticClass());
+
+
+	if (bPlayed) return;
+	
+	if (OtherActor) //&& OtherActor != GetOwner())
+	{
+		AMyEnemy* mc = Cast<AMyEnemy>(OtherActor);
+
+		if (mc)
+		{
+			int PlayerId = mc->GetIgnoreCharacterId();
+
+			UE_LOG(LogTemp, Warning,
+				TEXT("mc Exists âœ” | mc PlayerID = %d | BulletOwner = %d"),
+				PlayerId,
+				BulletOwner
+			);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning,
+				TEXT("mc is NULL âŒ | BulletOwner = %d"),
+				BulletOwner
+			);
+		}
+
+
+		
+		
+		if (mc && mc->GetIgnoreCharacterId() != BulletOwner) {
+			BulletAudio->PlaySound();
+			bPlayed = true;
+			
+		}
+		
+	}
+
+
+	/*
+	// ì½œë¦¬ì „ ì±„ë„ ì²´í¬
 	ECollisionChannel HitChannel = OtherComp->GetCollisionObjectType();
 
-	if (HitChannel == ECC_GameTraceChannel2) // Player Ã¤³Î
+	if (HitChannel == ECC_GameTraceChannel2) // Player ì±„ë„
 	{
 		GEngine->AddOnScreenDebugMessage(
 			-1,
 			3.f,
 			FColor::Green,
-			TEXT("Player Ã¤³Î¿¡ ¸ÂÀ½!")
+			TEXT("Player ì±„ë„ì— ë§ìŒ!")
 		);
 		if (Hit.GetActor() != nullptr) {
-			//µÇ´ÂÁö ¸ğ¸£°Ù³×..
+			//ë˜ëŠ”ì§€ ëª¨ë¥´ê²Ÿë„¤..
 			GEngine->AddOnScreenDebugMessage(
 				-1,
 				3.f,
 				FColor::Green,
 				TEXT("Player null!")
 			);
-			/* ¼­¹ö¶ó¼­ ÀÏ´Ü ºñÈ°¼ºÈ­
-			UGameplayStatics::ApplyDamage(Hit.GetActor(), 10, GetOwner()->GetInstigatorController(), GetOwner(), UDamageType::StaticClass());
-			*/
+			
+			UGameplayStatics::ApplyDamage(Hit.GetActor(), 10, nullptr, nullptr, UDamageType::StaticClass());
+			
 		}
 
 		
 		
 		
 	}
+	*/
 
-
-	GEngine->AddOnScreenDebugMessage(
-		-1,            // -1 = »õ ÁÙ (BP Print String ±âº» µ¿ÀÛ)
-		2.0f,          // È­¸é¿¡ Ç¥½ÃµÉ ½Ã°£
-		FColor::Yellow,
-		TEXT("Æã")
-	);
+	
 
 	//OnBulletHit.Broadcast(BulletId);
 	
 	if (OnBulletHit.IsBound())
 	{
-		OnBulletHit.Execute(BulletId);
+		OnBulletHit.Execute(BulletId, BulletOwner);
 	}
 
 	//Destroy();

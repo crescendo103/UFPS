@@ -1,7 +1,9 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "MyEnemy.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "MyServer.h"
 
 // Sets default values
 AMyEnemy::AMyEnemy()
@@ -9,13 +11,15 @@ AMyEnemy::AMyEnemy()
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
+	
+
 }
 
 // Called when the game starts or when spawned
 void AMyEnemy::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	MyServer = GetGameInstance()->GetSubsystem<UMyServer>();
 }
 
 // Called every frame
@@ -32,10 +36,39 @@ void AMyEnemy::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 }
 
-void AMyEnemy::SetSPD(float speed, FVector position, FVector direction)
+void AMyEnemy::SetSPD(float speed, FVector position, FVector direction, bool isjump, bool isfire)
 {
 	CurrentSpeed = speed;
 	Position = position;
 	Direction = direction;
+	IsJump = isjump;
+	IsFire = isfire;	
+
+}
+
+float AMyEnemy::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	UE_LOG(LogTemp, Warning,
+		TEXT("hit Enemy bullet"));
+	FDamagePacket packet;
+	packet.Header.Type = (int32)EPacketType::Damage;
+	packet.Header.Size = sizeof(FDamagePacket);
+	packet.CharacterId = -1;//나중에 재설정
+	packet.Damage = DamageAmount;
+	MyServer->MoveDmg(packet);
+
+	return DamageAmount;
+}
+
+void AMyEnemy::SetIgnoreCharacterId(int id)
+{
+	IgnoreCharacterID = id;
+}
+
+int AMyEnemy::GetIgnoreCharacterId()
+{
+	return IgnoreCharacterID;
 }
 

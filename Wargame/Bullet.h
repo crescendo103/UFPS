@@ -12,13 +12,15 @@
 
 #include <Components/SphereComponent.h>
 
+
 #include "Bullet.generated.h"
 
-DECLARE_DELEGATE_OneParam(FBulletHitDelegate, int32 BulletId);
+DECLARE_DELEGATE_TwoParams(FBulletHitDelegate, int32 BulletId, int32 CharacterId);
 
+class USoundComponent;
 
 UCLASS()
-class WARGAME_API ABullet : public AActor
+class FPS_API ABullet : public AActor
 {
 	GENERATED_BODY()
 	
@@ -48,6 +50,16 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "EffectNiagara")
 	UNiagaraSystem* BulletImpactEffect;
 
+	// 오디오 컴포넌트
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	class USoundComponent* BulletAudio;
+
+	// 1회 재생용
+	bool bPlayed = false;
+
+	int32 BulletOwner;
+
+	void SetBulletOwner(int32 owner);
 
 protected:
 	// Called when the game starts or when spawned
