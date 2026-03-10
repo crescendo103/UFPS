@@ -19,6 +19,9 @@ ClientTrd::ClientTrd(void* InSocket, UMyServer* InServer)
 	GrenadeQueue = new TQueue<FGrenadePacket, EQueueMode::Mpsc>();
 	AISpawnQueue = new TQueue<FSpawnAIPacket, EQueueMode::Mpsc>();
 	DmgQueue = new TQueue<FDamagePacket, EQueueMode::Mpsc>();
+	ConnectQueue = new TQueue<FConnectionPacket, EQueueMode::Mpsc>();
+	DeathQueue = new TQueue<FDeathPacket, EQueueMode::Mpsc>();
+
 	Thread = FRunnableThread::Create(this, TEXT("Network Thread"));
 	//RecvQueue = new TQueue<FServerBulletPos, EQueueMode::Mpsc>();
 	
@@ -100,6 +103,15 @@ uint32 ClientTrd::Run()
 
 			BulletQueue->Enqueue(Bullet);
 			Server->SetBulletPacket(Bullet);
+
+			
+			AsyncTask(ENamedThreads::GameThread, [this]()
+				{
+					if (Server)
+					{
+						Server->SpawnBullet();
+					}
+				});
 			
 			break;
 		}
@@ -156,15 +168,18 @@ uint32 ClientTrd::Run()
 				BodyReceived += Len;
 			}
 
-			TimeInformationQueue->Enqueue(TimePacket);
-			//Server->StartCountdownByPacket();
-			AsyncTask(ENamedThreads::GameThread, [this]()
+			//TimeInformationQueue->Enqueue(TimePacket);
+			int32 ReceivedTime = TimePacket.time;
+
+			AsyncTask(ENamedThreads::GameThread, [this, ReceivedTime]()
 				{
 					if (Server)
 					{
-						Server->StartCountdownByPacket();
+						Server->StartCountdownByPacket(ReceivedTime);
 					}
 				});
+
+			
 			break;
 		}
 		case EPacketType::Grenade:
@@ -255,7 +270,67 @@ uint32 ClientTrd::Run()
 			
 			break;
 		}
+		case EPacketType::Client: {
+			FConnectionPacket ConnectionPacket;
+			ConnectionPacket.Header = Header;
 
+			int BodySize = sizeof(FConnectionPacket) - sizeof(FPacketHeader);
+			int BodyReceived = 0;
+
+			while (BodyReceived < BodySize)
+			{
+				int Len = recv(Sock,
+					reinterpret_cast<char*>(&ConnectionPacket) + sizeof(FPacketHeader) + BodyReceived,
+					BodySize - BodyReceived,
+					0);
+
+				if (Len <= 0)
+				{
+					UE_LOG(LogTemp, Error, TEXT("connection Spawn recv failed"));
+					return 0;
+				}
+				BodyReceived += Len;
+			}
+
+			ConnectQueue->Enqueue(ConnectionPacket);
+			
+
+			break;
+		}
+		case EPacketType::Death:
+		{
+			FDeathPacket Packet;
+			Packet.Header = Header;
+
+			int BodySize = sizeof(FDeathPacket) - sizeof(FPacketHeader);
+			int BodyReceived = 0;
+
+			while (BodyReceived < BodySize)
+			{
+				int Len = recv(Sock,
+					reinterpret_cast<char*>(&Packet) + sizeof(FPacketHeader) + BodyReceived,
+					BodySize - BodyReceived,
+					0);
+
+				if (Len <= 0)
+				{
+					UE_LOG(LogTemp, Error, TEXT("Death recv failed"));
+					return 0;
+				}
+				BodyReceived += Len;
+			}
+
+			DeathQueue->Enqueue(Packet);
+
+			AsyncTask(ENamedThreads::GameThread, [this]()
+				{
+					if (Server)
+					{
+						Server->SpawnGrenade();
+					}
+				});
+			break;
+		}
 		default:
 			UE_LOG(LogTemp, Warning, TEXT("Unknown packet type: %d"), Header.Type);
 			break;

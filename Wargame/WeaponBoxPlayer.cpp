@@ -44,6 +44,12 @@ bool UWeaponBoxPlayer::NativeOnDrop(const FGeometry& InGeometry, const FDragDrop
     if (DragOp->ItemID == 1) {
         OwnerInventory->RemoveItemWidgetNoItemSpawn(DragOp->FromSlotIndex);
     }
+
+    //
+    FWeaponData Data = { DragOp->FromSlotIndex, DragOp->ItemActor };
+    PlayerWeaponData = Data;
+
+
     //Owner->CurrentWeapon = static_cast<EWeaponType>(DragOp->ItemID);
     
     //OwnerInventory->RemoveItemWidgetNoItemSpawn(DragOp->FromSlotIndex);

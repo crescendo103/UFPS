@@ -136,3 +136,13 @@ int32 AWeaponActor::GetItemName()
     return ItemRowName;
 }
 
+void AWeaponActor::SetMyGunCompo(AWeaponCompo* compo)
+{
+    myGunCompo = compo;
+}
+
+AWeaponCompo* AWeaponActor::GetMyGunCompo()
+{
+    return myGunCompo;
+}
+

@@ -5,32 +5,20 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/SizeBox.h"
-#include "Components/ScrollBox.h"
-#include "WeaponBox.generated.h"
+
+#include "InventoryGunCompoBox.generated.h"
 
 /**
  * 
  */
-USTRUCT(BlueprintType)
-struct FWeaponData
-{
-    GENERATED_BODY()
-
-    UPROPERTY()
-    int32 itemid;
-
-    UPROPERTY()
-    AActor* WeaponActor;
-};
-
 class UMyInventory;
 class UMyItem;
 
 UCLASS()
-class FPS_API UWeaponBox : public UUserWidget
+class FPS_API UInventoryGunCompoBox : public UUserWidget
 {
 	GENERATED_BODY()
-	
+
 public:
     virtual bool NativeOnDragOver(
         const FGeometry& InGeometry,
@@ -40,19 +28,15 @@ public:
     virtual bool NativeOnDrop(
         const FGeometry& InGeometry,
         const FDragDropEvent& InDragDropEvent,
-        UDragDropOperation* InOperation) override;    
+        UDragDropOperation* InOperation) override;
 
 
     void SetOwnerInventory(UMyInventory* InInventory);
     USizeBox* GetScrollBox();
-    
 
     UPROPERTY(meta = (BindWidget))
     USizeBox* WeaponBox;
 
     UPROPERTY()
     UMyInventory* OwnerInventory;
-    
-    UPROPERTY()
-    FWeaponData WeaponData;
 };

@@ -10,45 +10,39 @@ ABullet::ABullet()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	
-
-	// 구체를 단순 콜리전 표현으로 사용합니다.
+	// 콜리전 (루트)
 	CollisionComponent = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComponent"));
-	// 구체의 콜리전 반경을 설정합니다.
-	CollisionComponent->InitSphereRadius(15.0f);
-	// 루트 컴포넌트를 콜리전 컴포넌트로 설정합니다.
+	CollisionComponent->InitSphereRadius(5.0f);
+	CollisionComponent->SetCollisionProfileName(TEXT("Bull"));
+	//CollisionComponent->SetSimulatePhysics(true); 물리 시뮬?
 	RootComponent = CollisionComponent;
-	CollisionComponent->SetCollisionProfileName(TEXT("Bull"));//이거 작동안하는거같은데...
 
-
+	// 메쉬
 	StaticBulletMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BulletMesh"));
-	StaticBulletMesh->SetupAttachment(CollisionComponent);
-	StaticBulletMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision); // 중요!
-	StaticBulletMesh->SetMobility(EComponentMobility::Movable);
+	StaticBulletMesh->SetupAttachment(RootComponent);
+	StaticBulletMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-	// 이 컴포넌트를 사용하여 이 프로젝타일의 무브먼트를 구동시킵니다.
-
+	// Projectile
 	PojectileCompo = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovementComponent"));
-	PojectileCompo->InitialSpeed = 3000.f;
-	PojectileCompo->MaxSpeed = 3000.f;
-	
-	//PojectileCompo->ProjectileGravityScale = 0.f; // 중력 무시
-	/** 속도에 따른 로테이션 변화 X */
+	PojectileCompo->InitialSpeed = 1000.f;
+	PojectileCompo->MaxSpeed = 1000.f;
 	PojectileCompo->bRotationFollowsVelocity = false;
-	/** 바운스 X */
 	PojectileCompo->bShouldBounce = false;
-	PojectileCompo->Bounciness = 0.3f;
-	//CollisionComponent->SetCollisionProfileName(TEXT("BlockAll"));
-	PojectileCompo->SetUpdatedComponent(CollisionComponent);
-	PojectileCompo->Activate();//이거 무조건있어야하나봐
 
-	CollisionComponent->OnComponentHit.AddDynamic(this, &ABullet::OnHitSphere); //일단 임시로 차단...
+	PojectileCompo->SetUpdatedComponent(CollisionComponent);
+	
+
+	
+	//CollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &ABullet::OnOverlapSphere);
 
 	// Audio
 	BulletAudio = CreateDefaultSubobject<USoundComponent>(TEXT("BulletAudio"));
 	BulletAudio->SetupAttachment(RootComponent);
 	BulletAudio->bAutoActivate = false; // 자동 재생 끔
 
+	firstOverlap = false;
+
+	
 }
 
 void ABullet::SetBulletOwner(int32 owner)
@@ -56,11 +50,27 @@ void ABullet::SetBulletOwner(int32 owner)
 	BulletOwner = owner;
 }
 
+void ABullet::ActiveBulletOverlap()
+{
+	CollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &ABullet::OnOverlapSphere);
+}
+
 // Called when the game starts or when spawned
 void ABullet::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	GetWorld()->GetTimerManager().SetTimer(
+		OverlapTimerHandle,
+		this,
+		&ABullet::ActiveBulletOverlap,
+		0.000001f,
+		false
+	);
+
+	SetLifeSpan(5.0f);
+
+
 }
 
 // Called every frame
@@ -96,36 +106,44 @@ void ABullet::SetBulletId(int32 id)
 	BulletId = id;
 }
 
-void ABullet::OnHitSphere(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+void ABullet::OnOverlapSphere(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	if (!OtherActor || OtherActor == GetOwner())
+		return;
 
-	//디버그
-	FString ActorName = OtherActor ? OtherActor->GetName() : TEXT("None");
+	//처음은 무시
+	if (!firstOverlap) {
+		firstOverlap = true;
+		return;
+	}
+
+	FString ActorName = OtherActor->GetName();
 	FString CompName = OtherComp ? OtherComp->GetName() : TEXT("None");
 
 	GEngine->AddOnScreenDebugMessage(
 		-1,
 		3.f,
-		FColor::Red,
-		FString::Printf(TEXT("Hit Actor: %s | Component: %s"), *ActorName, *CompName)
+		FColor::Green,
+		FString::Printf(TEXT("Overlap Actor: %s | Component: %s"), *ActorName, *CompName)
 	);
-
-
-
 
 	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
 		GetWorld(),
 		BulletImpactEffect,
-		Hit.ImpactPoint,                    //  맞은 지점
-		Hit.ImpactNormal.Rotation()          //  표면 방향에 맞게 회전
+		SweepResult.ImpactPoint,
+		SweepResult.ImpactNormal.Rotation()
 	);
 
-
-	UGameplayStatics::ApplyDamage(Hit.GetActor(), 10, nullptr, nullptr, UDamageType::StaticClass());
-
+	UGameplayStatics::ApplyDamage(
+		OtherActor,
+		10,
+		GetInstigatorController(),
+		this,
+		UDamageType::StaticClass()
+	);
 
 	if (bPlayed) return;
-	
+
 	if (OtherActor) //&& OtherActor != GetOwner())
 	{
 		AMyEnemy* mc = Cast<AMyEnemy>(OtherActor);
@@ -149,56 +167,22 @@ void ABullet::OnHitSphere(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 		}
 
 
-		
-		
+
+
 		if (mc && mc->GetIgnoreCharacterId() != BulletOwner) {
 			BulletAudio->PlaySound();
 			bPlayed = true;
-			
-		}
-		
-	}
 
-
-	/*
-	// 콜리전 채널 체크
-	ECollisionChannel HitChannel = OtherComp->GetCollisionObjectType();
-
-	if (HitChannel == ECC_GameTraceChannel2) // Player 채널
-	{
-		GEngine->AddOnScreenDebugMessage(
-			-1,
-			3.f,
-			FColor::Green,
-			TEXT("Player 채널에 맞음!")
-		);
-		if (Hit.GetActor() != nullptr) {
-			//되는지 모르겟네..
-			GEngine->AddOnScreenDebugMessage(
-				-1,
-				3.f,
-				FColor::Green,
-				TEXT("Player null!")
-			);
-			
-			UGameplayStatics::ApplyDamage(Hit.GetActor(), 10, nullptr, nullptr, UDamageType::StaticClass());
-			
 		}
 
-		
-		
-		
 	}
-	*/
-
 	
+}
 
-	//OnBulletHit.Broadcast(BulletId);
-	
-	if (OnBulletHit.IsBound())
-	{
-		OnBulletHit.Execute(BulletId, BulletOwner);
-	}
 
-	//Destroy();
+
+void ABullet::Throw(const FVector& Direction, float Power)
+{
+	ShootBullet(Direction);
+	UE_LOG(LogTemp, Warning, TEXT("Dir: %s"), *Direction.ToString());
 }

@@ -4,6 +4,8 @@
 #include "Helicopter.h"
 #include <EnhancedInputComponent.h>
 #include "PawnManager.h"
+
+
 // Sets default values
 AHelicopter::AHelicopter()
 {
@@ -91,7 +93,17 @@ void AHelicopter::CalcCamera(float DeltaTime, FMinimalViewInfo& OutResult)
 
 void AHelicopter::JumpFromHelicopter()
 {
-	Manager->PossesLocalPlayer();
+	UE_LOG(LogTemp, Warning, TEXT("JumpFromHelicopter Called"));
+
+
+	if (Manager)
+	{
+		Manager->PossesLocalPlayer();
+	}
+	else {
+		UE_LOG(LogTemp, Warning, TEXT("JumpFromHelicopter Called wrong"));
+
+	}
 }
 
 void AHelicopter::RegisterManager(UPawnManager* manager)
@@ -118,8 +130,15 @@ void AHelicopter::PossessedBy(AController* NewController)
 	APlayerController* PC = Cast<APlayerController>(NewController);
 	if (!PC) return;
 
-	// ⭐ 자동 카메라 관리 끄기 (이거 안 하면 1프레임 뒤에 다시 캐릭터 카메라로 돌아감)
-	//PC->bAutoManageActiveCameraTarget = false;
+	// Input MappingContext 추가
+	if (ULocalPlayer* LP = PC->GetLocalPlayer())
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
+			LP->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
+		{
+			Subsystem->AddMappingContext(InputMappingContext, 1);
+		}
+	}
 
 	// 헬기 카메라 활성
 	ActivateCamera();

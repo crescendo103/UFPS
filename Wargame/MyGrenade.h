@@ -47,9 +47,9 @@ public:
 
 	
 
-	void ExplodeVoxel(FVector ExplosionCenter, float ExplosionRadius);
+	virtual void ExplodeVoxel(FVector ExplosionCenter, float ExplosionRadius);
 	UFUNCTION()
-	void Explode();
+	virtual void Explode();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grenade")
 	UMyGrenadeComponent* grenadeCompo;
@@ -66,10 +66,10 @@ public:
 
 	FTimerHandle ExplosionTimerHandle;
 
-
+	/*
 	UPROPERTY(EditDefaultsOnly, Category = "EffectNiagara")
 	UNiagaraSystem* GrenadeImpactEffect;
-
+	*/
 	// 수정할 VoxelWorld (블루프린트에서 지정 가능)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel")
 	AVoxelWorld* TargetVoxelWorld;

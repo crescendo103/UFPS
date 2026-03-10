@@ -27,6 +27,7 @@ class UHaveItemBox;
 class UWeaponBox;
 class AMyCharacter;
 class UWeaponBoxPlayer;
+class UInventoryGunCompoBox;
 UCLASS()
 class FPS_API UMyInventory : public UUserWidget
 {
@@ -98,6 +99,13 @@ public:
     UPROPERTY(EditDefaultsOnly, Category = "Inventory")
     TSubclassOf<UWeaponBoxPlayer> WeaponBoxPlayerWidgetClass;
 
+
+    UPROPERTY(EditDefaultsOnly, Category = "Inventory")
+    UInventoryGunCompoBox* GunCompoWidget;
+    UPROPERTY(EditDefaultsOnly, Category = "Inventory")
+    TSubclassOf<UInventoryGunCompoBox> GunCompoWidgetClass;
+
+
     UPROPERTY()
     AMyCharacter* Owner;
 
@@ -129,4 +137,10 @@ public:
     void OnOffPZarts();
     bool partsOn;
     
+
+    void WhosGunCompoToTrash(int32 itemidCard);
+    void AttachGunCompo(int32 itemidCard, AActor* weaponCompo);
+    void AddWeaponCompoBox(int32 itemId, AActor* actor);
+
+    void ActiveSecondWeaponToPlayer(AActor* actor);
 };

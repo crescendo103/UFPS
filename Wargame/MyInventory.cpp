@@ -12,6 +12,10 @@
 #include <Kismet/GameplayStatics.h>
 #include "WeaponBox.h"
 #include "WeaponBoxPlayer.h"
+#include "InventoryGunCompoBox.h"
+#include "WeaponActor.h"
+#include "WeaponCompo.h"
+#include "MyCharacter.h"
 
 void UMyInventory::NativeConstruct()
 {
@@ -41,6 +45,12 @@ void UMyInventory::NativeConstruct()
     WeaponBoxPlayerWidget->SetOwner(Owner);
     WeaponBoxPlayerWidget->AddToViewport(); // ZOrder 높게
     WeaponBoxPlayerWidget->SetVisibility(ESlateVisibility::Hidden);
+
+    GunCompoWidget = CreateWidget<UInventoryGunCompoBox>(GetWorld(), GunCompoWidgetClass);
+    GunCompoWidget->SetOwnerInventory(this);
+    //GunCompoWidget->SetOwner(Owner);
+    GunCompoWidget->AddToViewport(); // ZOrder 높게
+    GunCompoWidget->SetVisibility(ESlateVisibility::Hidden);
 }
 
 void UMyInventory::SwapItems(int32 From, int32 To)
@@ -50,7 +60,7 @@ void UMyInventory::SwapItems(int32 From, int32 To)
         From == To)
         return;
 
-    // ✅ 데이터 스왑
+    // 데이터 스왑
     Swap(ItemIDs[From], ItemIDs[To]);
 
    
@@ -410,6 +420,7 @@ void UMyInventory::OnOffPZarts()
         HaveWidget->SetVisibility(ESlateVisibility::Hidden);
         WeaponBoxWidget->SetVisibility(ESlateVisibility::Hidden);
         WeaponBoxPlayerWidget->SetVisibility(ESlateVisibility::Hidden);
+        GunCompoWidget->SetVisibility(ESlateVisibility::Hidden);
         //WeaponBoxWidget->SetVisibility(ESlateVisibility::Visible);
     }
     else {
@@ -418,10 +429,194 @@ void UMyInventory::OnOffPZarts()
         HaveWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
         WeaponBoxWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
         WeaponBoxPlayerWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+        GunCompoWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
         //WeaponBoxWidget->SetVisibility(ESlateVisibility::Visible);
     }
     partsOn = !partsOn;
 
+}
+
+void UMyInventory::WhosGunCompoToTrash(int32 itemidCard)
+{
+    if (WeaponBoxPlayerWidget->PlayerWeaponData.itemid == itemidCard) {
+        // Actor 먼저 제거 (있다면)
+        if (WeaponBoxPlayerWidget->PlayerWeaponData.WeaponActor)
+        {
+            //WeaponBoxPlayerWidget->WeaponData.WeaponActor->Destroy();
+            WeaponBoxPlayerWidget->PlayerWeaponData.itemid = -119;
+            WeaponBoxPlayerWidget->PlayerWeaponData.WeaponActor = nullptr;
+        }        
+    }
+
+
+    if (WeaponBoxWidget->WeaponData.itemid == itemidCard) {
+        // Actor 먼저 제거 (있다면)
+        if (WeaponBoxWidget->WeaponData.WeaponActor)
+        {
+            //WeaponBoxPlayerWidget->WeaponData.WeaponActor->Destroy();
+            WeaponBoxWidget->WeaponData.itemid = -119;
+            WeaponBoxWidget->WeaponData.WeaponActor = nullptr;
+        }
+    }
+}
+
+void UMyInventory::AttachGunCompo(int32 itemidCard, AActor* weaponCompo)
+{
+    /*
+    if (WeaponBoxPlayerWidget->PlayerWeaponData.itemid == itemidCard) {
+        // Actor 먼저 제거 (있다면)
+        if (WeaponBoxPlayerWidget->PlayerWeaponData.WeaponActor)
+        {
+            USkeletalMeshComponent* Mesh =
+                WeaponBoxPlayerWidget->PlayerWeaponData.WeaponActor->FindComponentByClass<USkeletalMeshComponent>();
+
+            if (weaponCompo)
+            {
+                weaponCompo->AttachToComponent(
+                    Mesh,
+                    FAttachmentTransformRules::SnapToTargetIncludingScale,
+                    TEXT("GunCompo")
+                );
+            }
+        }
+    }    */
+    UE_LOG(LogTemp, Warning, TEXT("AttachGunCompo 처음"));
+    
+
+    if (!WeaponBoxPlayerWidget)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("WeaponBoxPlayerWidget is NULL"));
+        return;
+    }
+
+    
+
+    //AActor* WeaponActor = WeaponBoxPlayerWidget->PlayerWeaponData.WeaponActor;
+    AWeaponActor* WeaponActor = Cast<AWeaponActor>(WeaponBoxPlayerWidget->PlayerWeaponData.WeaponActor);
+    if (!WeaponActor)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("WeaponActor is NULL"));
+        return;
+    }
+
+    AWeaponCompo* WeaponCompo = Cast<AWeaponCompo>(weaponCompo);
+    if (!WeaponCompo)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("WeaponCompo is NULL"));
+        return;
+    }
+    WeaponActor->SetMyGunCompo(WeaponCompo);  
+
+    if (!weaponCompo)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("WeaponCompo is NULL"));
+        return;
+    }
+
+    USkeletalMeshComponent* Mesh =
+        WeaponActor->FindComponentByClass<USkeletalMeshComponent>();
+
+    if (!Mesh)
+    {
+        UE_LOG(LogTemp, Error, TEXT("SkeletalMeshComponent NOT found in WeaponActor"));
+        return;
+    }
+
+    if (!Mesh->DoesSocketExist(TEXT("GunCompo")))
+    {
+        UE_LOG(LogTemp, Error, TEXT("Socket 'GunCompo' does NOT exist"));
+        return;
+    }
+
+    // Attach 시도
+    weaponCompo->AttachToComponent(
+        Mesh,
+        FAttachmentTransformRules::SnapToTargetIncludingScale,
+        TEXT("GunCompo")
+    );
+
+    // ✅ Attach 성공 여부 확인
+    if (weaponCompo->GetAttachParentActor() == WeaponActor)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Attach SUCCESS to GunCompo socket"));
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Attach FAILED"));
+    }
+
+
+
+    UE_LOG(LogTemp, Warning, TEXT("AttachGunCompo 끝"));
+}
+
+void UMyInventory::AddWeaponCompoBox(int32 itemId, AActor* actor)
+{
+    //HaveWidget->ItemHave(itemId,itemid);
+    UMyItem* slot = nullptr;
+
+    slot = CreateWidget<UMyItem>(GetWorld(), ItemSlotClass);
+    if (slot != nullptr) {
+        slot->Init(itemid, itemId, actor); // 슬롯번호, 아이템ID ??
+        slot->SetOwnerInventory(this);
+        ItemIDs.Add(itemId);//진짜 아이템 아이디
+
+        HaveActors.Add(itemid, actor);
+        HaveActorsWithHaveBox.Add(actor, 0);//0은 쓰레기값
+    }
+
+
+
+
+    // ScrollBox에 바로 추가
+    //UPanelSlot* PanelSlot = FloorItemBox->AddChild(slot);
+    UPanelSlot* PanelSlot = GunCompoWidget->GetScrollBox()->AddChild(slot);
+    if (UScrollBoxSlot* ScrollSlot = Cast<UScrollBoxSlot>(PanelSlot))
+    {
+        ScrollSlot->SetPadding(FMargin(0.f, 6.f));
+        ScrollSlot->SetHorizontalAlignment(HAlign_Fill);
+        //ScrollSlot->SetHorizontalAlignment(HAlign_Center);
+    }
+
+    ///ItemWidgets.Add(slot);
+    ItemWidgets.Add(itemid, slot);
+
+    slot->Refresh();
+
+    itemid++;
+}
+
+void UMyInventory::ActiveSecondWeaponToPlayer(AActor* actor)
+{
+    if (AWeaponActor* setItem = Cast<AWeaponActor>(actor)) {
+
+        FItemStaticData* StaticData = ItemTable->FindRow<FItemStaticData>(
+            FName(*FString::FromInt(setItem->ItemRowName)),
+            TEXT("Item Lookup")
+        );
+
+        if (!StaticData) return;
+
+        FTransform SocketTransform;
+
+        if (Owner && Owner->GetMesh())
+        {
+            SocketTransform =
+                Owner->GetMesh()->GetSocketTransform(
+                    TEXT("RightHandPinky4Socket"),
+                    RTS_World
+                );
+        }
+
+        FActorSpawnParameters SpawnParams;
+        SpawnParams.Owner = Owner;
+        //SpawnParams.Instigator = Owner->GetInstigator();
+        SpawnParams.SpawnCollisionHandlingOverride =
+            ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+        GetWorld()->SpawnActor<AWeaponActor>(StaticData->ItemActorClass, SocketTransform, SpawnParams);
+        Owner->SubItemClass = StaticData->RealActiveActorClass;
+    }
 }
 
 

@@ -56,7 +56,7 @@ bool UTrashBorder::NativeOnDrop(
     UE_LOG(LogTemp, Warning, TEXT("FromSlotIndex : %d"), DragOp->FromSlotIndex);
     UE_LOG(LogTemp, Warning, TEXT("ItemActor : %s"),
         DragOp->ItemActor ? *DragOp->ItemActor->GetName() : TEXT("NULL"));
-    
+    OwnerInventory->WhosGunCompoToTrash(DragOp->FromSlotIndex);
     
     OwnerInventory->RemoveActorHaveActorsWithHaveBox(DragOp->ItemActor);
 

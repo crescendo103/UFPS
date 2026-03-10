@@ -12,7 +12,12 @@
 #include "AIEnemy.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "MyCharacter.h"
+#include "StartMenuPawn.h"
 #include "Windows/HideWindowsPlatformTypes.h"
+#include "StartMenuWidget.h"
+#include "GameFramework/PlayerController.h"
+#include "CustomPlayerController.h"
+
 void UMyServer::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
@@ -31,12 +36,12 @@ void UMyServer::Initialize(FSubsystemCollectionBase& Collection)
 	if (Socket == INVALID_SOCKET) {
 		UE_LOG(LogTemp, Error, TEXT("Socket == INVALID_SOCKET"));
 	}
-
+	
 	// IP, Port 정보 입력
 	SOCKADDR_IN stServerAddr;
 	stServerAddr.sin_family = AF_INET;
 	stServerAddr.sin_port = htons(6000);
-	stServerAddr.sin_addr.s_addr = inet_addr("192.168.219.109");//내 pc ip
+	stServerAddr.sin_addr.s_addr = inet_addr("172.31.75.18");//inet_addr("192.168.219.109");//내 pc ip 61.254.29.99
 
 	// 접속
 	nRet = connect(Socket, (sockaddr*)&stServerAddr, sizeof(sockaddr));
@@ -153,12 +158,31 @@ void UMyServer::MoveDmg(FDamagePacket packet)
 {
 	SOCKET Sock = reinterpret_cast<SOCKET>(SocketHandle);
 
-	packet.CharacterId = MyOwner;//처음에 -1로 초기화
+	packet.CharacterId = MyOwner;//처음에 -1로 초기화???
 
 
 	int nSendLen = send(Sock, (char*)&packet, sizeof(FDamagePacket), 0);
 
 	
+}
+
+void UMyServer::MoveTime(int32 time)
+{
+	SOCKET Sock = reinterpret_cast<SOCKET>(SocketHandle);
+
+	FInformationTextPacket packet;
+	packet.Header.Size = sizeof(FInformationTextPacket);
+	packet.Header.Type = static_cast<int>(EPacketType::InformationText);
+	packet.time = time;
+
+	int nSendLen = send(Sock, (char*)&packet, sizeof(FInformationTextPacket), 0);
+}
+
+void UMyServer::MoveDeath(FDeathPacket packet)
+{
+	SOCKET Sock = reinterpret_cast<SOCKET>(SocketHandle);
+	packet.characterid = MyOwner;
+	int nSendLen = send(Sock, (char*)&packet, sizeof(FDeathPacket), 0);
 }
 
 void UMyServer::Shotoccurred(FServerBullet bullet)
@@ -266,14 +290,12 @@ void UMyServer::SetThreadSocketHandle()
 
 void UMyServer::SpawnActor()
 {
+	/*
 	FServerBullet Position;
 	while(ClientThread->BulletQueue->Dequeue(Position))
 	{		
 			if (Usedbullet.Find(Position.BulletId)) {//좀비 총알제거
-				/*
-				UE_LOG(LogTemp, Warning,
-					TEXT("conintue")
-				);*/
+				
 				continue;
 			}
 			
@@ -305,10 +327,7 @@ void UMyServer::SpawnActor()
 			else {
 				//이동로직
 				// 충돌 무시하고 즉시 이동
-				/*
-				UE_LOG(LogTemp, Warning,
-					TEXT("moveSpawnItem")
-				);*/
+				
 				SpawnItems[Position.BulletId]->SetActorLocation(
 					Pos,
 					true,   // Sweep 
@@ -320,7 +339,7 @@ void UMyServer::SpawnActor()
 		
 
 		
-	}
+	}*/
 	FCharacterPacket data;
 	while (ClientThread->CharacterQueue->Dequeue(data))
 	{
@@ -384,7 +403,7 @@ void UMyServer::SpawnActor()
 			SpawnEnemy->SetIgnoreCharacterId(MyOwner);
 			SpawnEnemys.Add(data.CharacterId, SpawnEnemy);
 
-			SpawnEnemy->SetSPD(data.Speed, Pos2, Dir2, data.IsJump, data.IsFire);
+			SpawnEnemy->SetSPD(data.Speed, Pos2, Dir2, data.IsJump, data.IsFire, data.IsDeath);
 			MyOwner = data.CharacterId;
 
 
@@ -402,7 +421,7 @@ void UMyServer::SpawnActor()
 			FRotator LookRot = Dir2.Rotation();
 			Enemy->SetActorRotation(LookRot);
 			Enemy->GetCharacterMovement()->Velocity = Dir2 * data.Speed;
-			Enemy->SetSPD(data.Speed, Pos2, Dir2, data.IsJump, data.IsFire);
+			Enemy->SetSPD(data.Speed, Pos2, Dir2, data.IsJump, data.IsFire, data.IsDeath);
 		}
 	}
 	}	
@@ -486,8 +505,39 @@ void UMyServer::SpawnActor()
 
 	FDamagePacket Dmgdata;
 	while (ClientThread->DmgQueue->Dequeue(Dmgdata))
-	{
+	{		
+		//if (Dmgdata.CharacterId != MyOwner) // ← 여기서 체크
+		//	continue;
+
+		AMyCharacter* myCharacter = Cast<AMyCharacter>(LocalPlayer);
+		
+		UE_LOG(LogTemp, Warning,
+			TEXT("서버로부터 데미지를 받음! CharacterId=%d"),
+			Dmgdata.CharacterId  // int			
+		);
+
 		UGameplayStatics::ApplyDamage(LocalPlayer, Dmgdata.Damage, nullptr, nullptr, UDamageType::StaticClass());
+		if (Dmgdata.Effect == EPlayerEffect::Red) {
+			myCharacter->HitPostProcessComp->TriggerHitEffect(1.0f);
+		}
+		else if (Dmgdata.Effect == EPlayerEffect::White) {
+			myCharacter->HitPostProcessComp->TriggerWhiteEffect(1.0f);
+		}
+		else {
+			myCharacter->HitPostProcessComp->TriggerZoneEffect(1.0f);
+		}
+	}
+
+	FConnectionPacket ConnectPacket;
+	while (ClientThread->ConnectQueue->Dequeue(ConnectPacket))
+	{
+		for (AStartMenuPawn* Player : StartPlayers)
+		{
+			if (!IsValid(Player)) continue;
+
+			Player->MoveEnemy(0);
+		}
+
 	}
 	
 }
@@ -550,15 +600,18 @@ void UMyServer::CheckMyOwner(FVector pos, int32 id)
 	}
 }
 
-void UMyServer::SetWatingRoomClass(TSubclassOf<UWatingRoom> blueprint)
-{
-	WatingRoomClass = blueprint;
-}
 
 void UMyServer::SetWatingRoomPointer(UWatingRoom* room)
 {
 	WatingRoomWidget = room;
 }
+/*
+void UMyServer::SetStartingMenuPointer(UStartMenuWidget* widget)
+{
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	UWatingRoom* WatingRoomWidget = CreateWidget<UWatingRoom>(PC, WatingRoomClass);
+	WatingRoomWidget->AddToViewport();
+}*/
 
 void UMyServer::SetRocalPlayer(AActor* actor)
 {
@@ -662,7 +715,7 @@ void UMyServer::PorcessCharacterPacket()
 
 			SpawnEnemys.Add(data.CharacterId, SpawnEnemy);
 
-			SpawnEnemy->SetSPD(data.Speed, Pos2, Dir2, data.IsJump, data.IsFire);
+			SpawnEnemy->SetSPD(data.Speed, Pos2, Dir2, data.IsJump, data.IsFire, data.IsDeath);
 			MyOwner = data.CharacterId;
 
 
@@ -681,7 +734,7 @@ void UMyServer::PorcessCharacterPacket()
 			UE_LOG(LogTemp, Warning, TEXT("Dir2: %s"), *Dir2.ToString());
 			Enemy->SetActorRotation(LookRot);
 			Enemy->GetCharacterMovement()->Velocity = Dir2 * data.Speed;
-			Enemy->SetSPD(data.Speed, Pos2, Dir2, data.IsJump, data.IsFire);
+			Enemy->SetSPD(data.Speed, Pos2, Dir2, data.IsJump, data.IsFire, data.IsDeath);
 		}
 	}
 }
@@ -737,6 +790,38 @@ void UMyServer::SpawnGrenade()
 		}
 	}
 }
+
+
+void UMyServer::SpawnBullet()
+{
+	UE_LOG(LogTemp, Warning, TEXT("총알 생성단계"));
+	FServerBullet data;
+	while (ClientThread->BulletQueue->Dequeue(data))
+	{
+		if (!SpawnItems.Contains(data.BulletId) && BulletClass)
+		{
+
+
+			FVector Pos2 = FVector(data.X, data.Y, data.Z);
+			FVector Dir2 = FVector(data.DirX, data.DirY, data.DirZ);
+			FTransform SpawnTransform;
+			SpawnTransform.SetLocation(Pos2);
+
+			FActorSpawnParameters SpawnParams;//스폰할 액터의 옵션 지정					
+			SpawnParams.SpawnCollisionHandlingOverride =
+				ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			ABullet* SpawnBullet = GetWorld()->SpawnActor<ABullet>(BulletClass, SpawnTransform, SpawnParams);
+			//SpawnEnemy->SetActorEnableCollision(false);
+
+			SpawnItems.Add(data.BulletId, SpawnBullet);
+
+			SpawnBullet->Throw(Dir2, 3000);
+			UE_LOG(LogTemp, Warning, TEXT("총알 생성완료"));
+		}
+	}
+}
+
+
 
 
 
@@ -795,20 +880,22 @@ void UMyServer::OnBulletHit(int32 BulletId, int32 CharacterId)
 	
 }
 
-void UMyServer::StartCountdownByPacket()
+void UMyServer::StartCountdownByPacket(int countdownamount)
 {
 	// ✅ 이미 실행 중이면 무시
+	/*
 	if (bCountdownStarted)
 		return;
-
+	*/
 
 	// 중복 방지
+	/*
 	if (GetWorld()->GetTimerManager().IsTimerActive(CountdownTimerr))
 		return;
-
+	*/
 	UE_LOG(LogTemp, Warning, TEXT("Start Countdown Timer"));
 
-	CountdownTime = 10;
+	CountdownTime = countdownamount;//10;
 
 	GetWorld()->GetTimerManager().SetTimer(
 		CountdownTimerr,
@@ -825,23 +912,41 @@ void UMyServer::SetMyCharacter(AMyCharacter* character)
 	MyCharacter = character;
 }
 
+void UMyServer::MoveStartEnemyPawn(int order)
+{
+}
+
+void UMyServer::SetStartMenuPawn(APawn* pawn)
+{
+	StartMenuPawn = pawn;
+}
+
 void UMyServer::UpdateCountdownUI()
 {
-	//int32 Time = 300;
+	if (CountdownTime < 0) {
+		return;
+	}
 	
+	UWorld* World = GetWorld();
+	if (!World) return;
 
-	UE_LOG(LogTemp, Warning, TEXT("Countdown: %d"), CountdownTime);
-
-	// UI 업데이트용 델리게이트 따로 쏴도 되고
-	// 그냥 내부 상태만 줄여도 됨
-	WatingRoomWidget->SetInformationText(FText::AsNumber(CountdownTime));
-	CountdownTime--;
-	
-	if (CountdownTime <= 0)
+	APlayerController* BasePC = World->GetFirstPlayerController();
+	if (!BasePC)
 	{
-		GetWorld()->GetTimerManager().ClearTimer(CountdownTimerr);
-		UE_LOG(LogTemp, Warning, TEXT("Countdown Finished"));
-		WatingRoomWidget->RemoveFromParent();
+		UE_LOG(LogTemp, Warning, TEXT("BasePC is null"));
+		return;
 	}
 
+	ACustomPlayerController* PC = Cast<ACustomPlayerController>(BasePC);
+	if (!PC)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Cast to CustomPlayerController failed. Actual: %s"),
+			*BasePC->GetClass()->GetName());
+		return;
+	}
+
+	PC->SetTextTime(CountdownTime);
+	UE_LOG(LogTemp, Warning, TEXT("Countdown: %d"), CountdownTime);
+	CountdownTime--;
+	
 }

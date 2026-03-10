@@ -1,14 +1,11 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "WeaponBox.h"
+#include "InventoryGunCompoBox.h"
 #include "MyDragDropOperation.h"
-#include "MyItem.h"
-#include <Components/ScrollBoxSlot.h>
 #include "MyInventory.h"
-#include "MyCharacter.h"
 
-bool UWeaponBox::NativeOnDragOver(
+bool UInventoryGunCompoBox::NativeOnDragOver(
     const FGeometry& InGeometry,
     const FDragDropEvent& InDragDropEvent,
     UDragDropOperation* InOperation)
@@ -16,12 +13,12 @@ bool UWeaponBox::NativeOnDragOver(
     return true; // ⭐ 핵심
 }
 
-bool UWeaponBox::NativeOnDrop(
+bool UInventoryGunCompoBox::NativeOnDrop(
     const FGeometry& InGeometry,
     const FDragDropEvent& InDragDropEvent,
     UDragDropOperation* InOperation)
 {
-    UE_LOG(LogTemp, Warning, TEXT("Drop On HaveItem"));
+    UE_LOG(LogTemp, Warning, TEXT("Drop On Compobox"));
 
 
     UMyDragDropOperation* DragOp =
@@ -30,28 +27,23 @@ bool UWeaponBox::NativeOnDrop(
     if (!DragOp || !OwnerInventory)
         return false;
     
-    OwnerInventory->AddWeaponBox(DragOp->ItemID, DragOp->ItemActor);
-    OwnerInventory->Owner->WeaponAttach(DragOp->ItemActor, "backSocket");
+    OwnerInventory->AddWeaponCompoBox(DragOp->ItemID, DragOp->ItemActor);
+    OwnerInventory->AttachGunCompo(DragOp->FromSlotIndex, DragOp->ItemActor);
 
     //OwnerInventory->RemoveItemWidget(DragOp->FromSlotIndex);    
     OwnerInventory->RemoveItemWidgetNoItemSpawn(DragOp->FromSlotIndex);
-
-    OwnerInventory->ActiveSecondWeaponToPlayer(DragOp->ItemActor);
-    //
-    FWeaponData Data = { DragOp->FromSlotIndex, DragOp->ItemActor };
-    WeaponData = Data;
-
-    UE_LOG(LogTemp, Log,
-        TEXT("추가 영역"));
+    
+    
     return true;
 }
 
-void UWeaponBox::SetOwnerInventory(UMyInventory* InInventory)
+
+void UInventoryGunCompoBox::SetOwnerInventory(UMyInventory* InInventory)
 {
     OwnerInventory = InInventory;
 }
 
-USizeBox* UWeaponBox::GetScrollBox()
+USizeBox* UInventoryGunCompoBox::GetScrollBox()
 {
     return WeaponBox;
 }

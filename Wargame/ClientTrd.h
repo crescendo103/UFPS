@@ -32,6 +32,8 @@ public:
 	TQueue<FGrenadePacket, EQueueMode::Mpsc>* GrenadeQueue;
 	TQueue<FSpawnAIPacket, EQueueMode::Mpsc>* AISpawnQueue;
 	TQueue<FDamagePacket, EQueueMode::Mpsc>* DmgQueue;
+	TQueue<FConnectionPacket, EQueueMode::Mpsc>* ConnectQueue;
+	TQueue<FDeathPacket, EQueueMode::Mpsc>* DeathQueue;
 
 	UMyServer* Server;
 

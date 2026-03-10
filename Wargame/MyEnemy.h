@@ -29,8 +29,8 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	void SetSPD(float speed, FVector position, FVector direction, bool isjump, bool isfire);
-	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+	void SetSPD(float speed, FVector position, FVector direction, bool isjump, bool isfire, bool isdeath);
+	//virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 	void SetIgnoreCharacterId(int id);
 	int GetIgnoreCharacterId();
 
@@ -46,6 +46,8 @@ public:
 	bool IsJump;
 	UPROPERTY(BlueprintReadOnly, Category = "Anim")
 	bool IsFire;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Anim")
+	bool IsDeath;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Myserver")
 	UMyServer* MyServer;
 	

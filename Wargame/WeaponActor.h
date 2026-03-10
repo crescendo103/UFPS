@@ -11,6 +11,8 @@
 #include "HighlightInterface.h"
 #include "WeaponActor.generated.h"
 
+class AWeaponCompo;
+
 UCLASS(Blueprintable)
 class FPS_API AWeaponActor : public AActor, public IHighlightInterface, public ISpawnItemActor
 {
@@ -20,7 +22,7 @@ public:
 	// Sets default values for this actor's properties
 	AWeaponActor();
 
-protected:
+public:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Meshy")
@@ -59,4 +61,9 @@ public:
 	
 	USphereComponent* GetTriggerSphere() const { return TriggerSphere; }
 	
+
+	AWeaponCompo* myGunCompo;
+
+	void SetMyGunCompo(AWeaponCompo* compo);
+	AWeaponCompo* GetMyGunCompo();
 };

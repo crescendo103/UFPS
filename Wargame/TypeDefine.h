@@ -11,7 +11,9 @@ enum class EPacketType : int
     InformationText = 3,
     Grenade = 4,
     AiSpawn =5,
-    Damage=6
+    Damage=6,
+    Client=7,
+    Death=8
 };
 
 UENUM(BlueprintType)
@@ -20,6 +22,14 @@ enum class EItemType : uint8
     Weapon = 0,
     Character = 1,
     Hit = 2,
+};
+
+UENUM(BlueprintType)
+enum class EPlayerEffect : uint8
+{
+    Red = 0,
+    Blue = 1,
+    White = 2,
 };
 
 USTRUCT(BlueprintType)
@@ -103,6 +113,9 @@ struct FCharacterPacket
     UPROPERTY()
     bool IsFire;
 
+    UPROPERTY()
+    bool IsDeath;
+
 };
 USTRUCT(BlueprintType)
 struct FItemStaticData : public FTableRowBase
@@ -126,6 +139,10 @@ struct FItemStaticData : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
     TSubclassOf<AActor> ItemActorClass;
 
+    // ✅ 스폰할 블루프린트 클래스
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    TSubclassOf<AActor> RealActiveActorClass;
+
 };
 
 
@@ -139,7 +156,7 @@ struct FInformationTextPacket
     //1총알, 2캐릭터 위치
 
     UPROPERTY()
-    bool time;    
+    int32 time;    
 
 };
 
@@ -202,9 +219,38 @@ struct FDamagePacket
 
     UPROPERTY()
     FPacketHeader Header;
+
+    UPROPERTY()
+    EPlayerEffect Effect;
     UPROPERTY()
     int CharacterId;
     UPROPERTY()
     int Damage;    
 };
 
+
+USTRUCT(BlueprintType)
+struct FConnectionPacket
+{
+    GENERATED_BODY()
+
+    UPROPERTY()
+    FPacketHeader Header;
+    UPROPERTY()
+    int order;
+    
+};
+
+USTRUCT(BlueprintType)
+struct FDeathPacket
+{
+    GENERATED_BODY()
+
+    UPROPERTY()
+    FPacketHeader Header;
+
+    UPROPERTY()
+    int aiid;
+    UPROPERTY()
+    int characterid;
+};

@@ -18,28 +18,7 @@ void UPawnManager::PossesHelicopter()
 	if (!PC) return;
 
 	PC->Possess(Helicopter);
-    /*
-	APlayerController* PC = GetWorld()->GetFirstPlayerController();
-    if (!PC || !Helicopter) return;
-
-    // ⭐⭐⭐ 이게 핵심 중 핵심 ⭐⭐⭐
-    PC->bAutoManageActiveCameraTarget = false;
-
-    // ⭐ 헬기 카메라 강제 활성화
-    Helicopter->ActivateCamera();
-    FViewTargetTransitionParams Params;
-    Params.BlendTime = 0.5f;
-    Params.BlendFunction = VTBlend_Cubic;
-
-    AActor* CurrentTarget = PC->GetViewTarget();
-    UE_LOG(LogTemp, Warning, TEXT("Before SetViewTarget: %s"),
-        *GetNameSafe(CurrentTarget));
-
-    PC->SetViewTarget(Helicopter, Params);
-
-    UE_LOG(LogTemp, Warning, TEXT("After SetViewTarget: %s"),
-        *GetNameSafe(PC->GetViewTarget()));
-	//PC->SetViewTargetWithBlend(Helicopter, 0.5f);*/
+    
     
 }
 
@@ -90,22 +69,6 @@ void UPawnManager::PossesLocalPlayer()
     );
     LocalPlayer->SetParachuteActor(Parachute);
 
-    /*
-    APlayerController* PC = GetWorld()->GetFirstPlayerController();
-    if (!PC || !LocalPlayer) return;
-
-    PC->bAutoManageActiveCameraTarget = true;
-
-    FViewTargetTransitionParams Params;
-    Params.BlendTime = 0.3f;
-    Params.BlendFunction = VTBlend_Cubic;
-
-    PC->SetViewTarget(LocalPlayer, Params);
-    
-    FVector HeliPos = Helicopter->GetActorLocation();
-    FVector HeliDownPos = HeliPos + FVector(0.f, 0.f, -10.f);
-    LocalPlayer->SetActorLocation(HeliDownPos);
-    */
 }
 void UPawnManager::SpawnHeli()
 {

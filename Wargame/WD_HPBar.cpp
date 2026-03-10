@@ -4,17 +4,18 @@
 #include "WD_HPBar.h"
 
 
-void UWD_HPBar::SettHpBar(float amount)
+bool UWD_HPBar::SettHpBar(float amount)
 {
 
     CurrentHp -= amount;
     if (CurrentHp < 0) {
         CurrentHp = 0;
+        return true;
     }
 
     Percent = CurrentHp / MaxHp;
     ProgressBar->SetPercent(Percent);
-
+    return false;
 }
 
 void UWD_HPBar::NativeConstruct()

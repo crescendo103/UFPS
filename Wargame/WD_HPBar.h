@@ -31,7 +31,7 @@ public:
 	float Percent = 100.f;
 
 
-	void SettHpBar(float amount);
+	bool SettHpBar(float amount);
 
 	virtual void NativeConstruct() override;
 };

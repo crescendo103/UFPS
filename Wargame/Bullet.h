@@ -9,6 +9,7 @@
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraSystem.h"
 #include <Kismet/GameplayStatics.h>
+#include "TimerManager.h"
 
 #include <Components/SphereComponent.h>
 
@@ -36,8 +37,18 @@ public:
 	int32 BulletId;
 	
 	void SetBulletId(int32 id);
+	//UFUNCTION()
+	//void OnHitSphere(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+
 	UFUNCTION()
-	void OnHitSphere(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+	void OnOverlapSphere(
+		UPrimitiveComponent* OverlappedComponent,
+		AActor* OtherActor,
+		UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex,
+		bool bFromSweep,
+		const FHitResult& SweepResult
+	);
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
 	UProjectileMovementComponent* PojectileCompo; 
@@ -56,10 +67,13 @@ public:
 
 	// 1회 재생용
 	bool bPlayed = false;
+	bool firstOverlap;
 
 	int32 BulletOwner;
+	FTimerHandle OverlapTimerHandle;
 
 	void SetBulletOwner(int32 owner);
+	void ActiveBulletOverlap();
 
 protected:
 	// Called when the game starts or when spawned
@@ -69,4 +83,5 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	void Throw(const FVector& Direction, float Power);
 };

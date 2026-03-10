@@ -10,6 +10,7 @@
 #include "Components/SphereComponent.h"
 #include "GameFramework/FloatingPawnMovement.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "EnhancedInputSubsystems.h"
 
 #include "Helicopter.generated.h"
 
@@ -62,4 +63,8 @@ public:
 	UPawnManager* Manager;
 	UPROPERTY(VisibleAnywhere)
 	UFloatingPawnMovement* Movement;
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputMappingContext* InputMappingContext;
 };

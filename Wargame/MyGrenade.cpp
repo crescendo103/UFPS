@@ -54,8 +54,9 @@ void AMyGrenade::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	TargetVoxelWorld = Cast<AVoxelWorld>(UGameplayStatics::GetActorOfClass(GetWorld(), AVoxelWorld::StaticClass()));
-	UE_LOG(LogTemp, Warning, TEXT("VoxelWorld: %s"), *TargetVoxelWorld->GetName());
+
+	//TargetVoxelWorld = Cast<AVoxelWorld>(UGameplayStatics::GetActorOfClass(GetWorld(), AVoxelWorld::StaticClass()));
+	//UE_LOG(LogTemp, Warning, TEXT("VoxelWorld: %s"), *TargetVoxelWorld->GetName());
 
 	StaticGrenadeMesh->OnComponentHit.AddDynamic(
 		this,
@@ -94,7 +95,15 @@ void AMyGrenade::ThrowWheelVal(float val)
 	);
 }
 
+void AMyGrenade::Explode()
+{
+	UE_LOG(LogTemp, Warning, TEXT("wrong Explode"));
+}
 
+void AMyGrenade::ExplodeVoxel(FVector ExplosionCenter, float ExplosionRadius)
+{
+	UE_LOG(LogTemp, Warning, TEXT("wrong ExplodeVoxel"));
+}
 
 
 
@@ -125,48 +134,6 @@ void AMyGrenade::Throw(const FVector& Direction, float Power)
 
 
 
-
-
-void AMyGrenade::Explode()
-{
-	if (GrenadeImpactEffect)
-	{
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-			GetWorld(),
-			GrenadeImpactEffect,
-			GetActorLocation(),
-			GetActorRotation()
-		);
-	}
-	ExplodeVoxel(GetActorLocation(), 200.f);
-	
-	
-
-	
-}
-
-
-void AMyGrenade::ExplodeVoxel(FVector ExplosionCenter, float ExplosionRadius)
-{
-	if (!TargetVoxelWorld) return;
-
-	UE_LOG(LogTemp, Warning, TEXT("ExplodeVoxel"));
-
-	UVoxelSphereTools::RemoveSphere(
-		TargetVoxelWorld,
-		ExplosionCenter,
-		ExplosionRadius,
-		nullptr,   // ModifiedValues 필요 없으면 nullptr
-		nullptr,   // EditedBounds 필요 없으면 nullptr
-		true,      // MultiThreaded
-		true,      // ConvertToVoxelSpace
-		true       // UpdateRender
-	);
-
-	Destroy();
-}
-
-
 void AMyGrenade::OnHitSphere(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
 	if (bSticked) return;
@@ -188,6 +155,8 @@ void AMyGrenade::OnHitSphere(UPrimitiveComponent* HitComponent, AActor* OtherAct
 		FColor::Red,
 		FString::Printf(TEXT("Hit Actor: %s | Component: %s"), *ActorName, *CompName)
 	);	
+
+	
 
 	// 콜리전 채널 체크
 	ECollisionChannel HitChannel = OtherComp->GetCollisionObjectType();

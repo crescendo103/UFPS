@@ -6,6 +6,8 @@
 #include "WeaponBox.h"
 #include "WeaponBoxPlayer.generated.h"
 
+
+
 /**
  * 
  */
@@ -26,4 +28,7 @@ public:
 		const FDragDropEvent& InDragDropEvent,
 		UDragDropOperation* InOperation) override;
 	
+
+	UPROPERTY()
+	FWeaponData PlayerWeaponData;
 };

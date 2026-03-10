@@ -26,6 +26,7 @@
 #include "WD_HPBar.h"
 #include "Engine/DamageEvents.h"
 #include "AIEnemy.h"
+#include "CP_BloodEffect.h"
 
 #include "WeaponComponent.h"
 #include "MyCharacter.generated.h"
@@ -100,7 +101,8 @@ public:
     UInputAction* InterAction;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
     UInputAction* TestAction;
-    
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+    UInputAction* GunCompoAction;
 
     // 새로운 컴포넌트들을 UPROPERTY로 선언
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
@@ -127,6 +129,12 @@ public:
     bool bIsHealKit;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Animation")
     bool bIsHanging;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Animation")
+    bool bIsZooming;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Animation")
+    float Pitch;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Animation")
+    bool bIsDeath;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SocketName")
     FName GunSocket;
@@ -143,18 +151,7 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Myserver")
     UMyServer* MyServer;
 
-    //총기 조준점
-    UPROPERTY(EditDefaultsOnly, Category = "UI")
-    TSubclassOf<UUserWidget> AimWidgetClass;//블루프린트 위젯 설계도
-    UPROPERTY()
-    class UAimWidget* AimWidget;
-    //UUserWidget* AimWidget;//실제로 만들어진 객체
-    //
-    UPROPERTY(EditDefaultsOnly, Category = "UI")
-    TSubclassOf<UWD_HPBar> HPBarClass;//블루프린트 위젯 설계도
-    UPROPERTY()
-    class UWD_HPBar* HpBarWidget;
-
+    
 
     UPROPERTY(EditDefaultsOnly, Category = "UI")
     TSubclassOf<UMyInventory> InventoryWidgetClass;//블루프린트 위젯 설계도
@@ -174,8 +171,7 @@ public:
     TSubclassOf<AMyEnemy> EnermyClass;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
     TSubclassOf<AAIEnemy> AIClass;
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-    TSubclassOf<UWatingRoom> WatingRoomClass;
+    
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
     UWeaponComponent* WeaponComponent;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "WeaponRay")
@@ -231,7 +227,7 @@ public:
     void ChangeSecondWeapon();
     void MouseWheel(const FInputActionValue& Value);
     AWeaponBase* GetWeaponBase();
-    UAimWidget* GetPlayerUI();
+    
     void InitScreenCenter();
     void CameraLineTrace();
 
@@ -261,4 +257,24 @@ public:
 
     void SetPlayerID(int32 id);
     int32 GetPlayerID();
+
+
+    void OnDamaged();
+    void OutZone();
+    void InZone();
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PostProcess")
+    UCP_BloodEffect* HitPostProcessComp;
+
+
+    void GunCompoActive();
+    void GUnCompoDeActive();
+    void Die();
+
+    UPROPERTY()
+    AWeaponActor* CurrentGunWeapon;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
+    TSubclassOf<AActor> SubItemClass;
+    
 };
