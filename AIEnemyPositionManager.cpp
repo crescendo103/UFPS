@@ -82,7 +82,7 @@ void AIEnemyPositionManager::RandomPositionWithScale()
     if (Isclear) {    
         int index = rand() % Points.size();
         randPos.push(Points[index]);
-        randPos.push(Points[index]);
+        //randPos.push(Points[index]);
         Isclear = false;
     }
     else {
