@@ -8,7 +8,8 @@ enum class EWeaponType : uint8
 {
     Rifle   UMETA(DisplayName = "Rifle"),
     HealKit UMETA(DisplayName = "HealKit"),    
-    Grenade UMETA(DisplayName = "Grenade")    
+    Grenade UMETA(DisplayName = "Grenade"),  
+    Melee UMETA(DisplayName = "Melee")
 };
 
 

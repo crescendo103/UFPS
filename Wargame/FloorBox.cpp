@@ -50,7 +50,7 @@ bool UFloorBox::NativeOnDrop(
 
     if (!DragOp || !OwnerInventory)
         return false;
-    OwnerInventory->AddFloorItemBox(DragOp->ItemID, DragOp->ItemActor);
+    OwnerInventory->AddFloorItemBox(DragOp->ItemID, DragOp->ItemActor, DragOp->ItemSpawnID);
     
     UE_LOG(LogTemp, Warning,
         TEXT("[Drop] FromSlotIndex=%d, ItemID=%d, Actor=%s"),
@@ -62,6 +62,7 @@ bool UFloorBox::NativeOnDrop(
     // ⭐⭐⭐ 핵심 ⭐⭐⭐
     // 2️⃣ FloorItemBox 쪽 아이템 제거
     OwnerInventory->RemoveItemWidget(DragOp->FromSlotIndex);
+    OwnerInventory->RemoveFloorItem(DragOp->ItemActor);//있다면
 
     UE_LOG(LogTemp, Log,
         TEXT("추가 영역"));

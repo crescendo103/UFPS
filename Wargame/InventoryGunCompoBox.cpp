@@ -27,7 +27,7 @@ bool UInventoryGunCompoBox::NativeOnDrop(
     if (!DragOp || !OwnerInventory)
         return false;
     
-    OwnerInventory->AddWeaponCompoBox(DragOp->ItemID, DragOp->ItemActor);
+    OwnerInventory->AddWeaponCompoBox(DragOp->ItemID, DragOp->ItemActor, DragOp->ItemSpawnID);
     OwnerInventory->AttachGunCompo(DragOp->FromSlotIndex, DragOp->ItemActor);
 
     //OwnerInventory->RemoveItemWidget(DragOp->FromSlotIndex);    

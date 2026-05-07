@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "ClientTrd.h"
@@ -21,6 +21,8 @@ ClientTrd::ClientTrd(void* InSocket, UMyServer* InServer)
 	DmgQueue = new TQueue<FDamagePacket, EQueueMode::Mpsc>();
 	ConnectQueue = new TQueue<FConnectionPacket, EQueueMode::Mpsc>();
 	DeathQueue = new TQueue<FDeathPacket, EQueueMode::Mpsc>();
+	MeleeQueue = new TQueue<FServerBullet, EQueueMode::Mpsc>();
+	ItemSpawnQueue = new TQueue<FItemPacket, EQueueMode::Mpsc>();
 
 	Thread = FRunnableThread::Create(this, TEXT("Network Thread"));
 	//RecvQueue = new TQueue<FServerBulletPos, EQueueMode::Mpsc>();
@@ -31,7 +33,7 @@ ClientTrd::~ClientTrd()
 {
 	if (Thread)
 	{
-		// ������ ����
+		// 스레드 종료
 		Thread->WaitForCompletion();
 		Thread->Kill();
 		delete Thread;
@@ -40,304 +42,231 @@ ClientTrd::~ClientTrd()
 
 bool ClientTrd::Init()
 {
-	UE_LOG(LogNet, Warning, TEXT("Thread has been initialized"));
+	UE_LOG(LogNet, Warning, TEXT("ClientTrd has been initialized"));
 	
 	return true;
 	
 }
-
 uint32 ClientTrd::Run()
 {
 	SOCKET Sock = reinterpret_cast<SOCKET>(Socket);
 
+	const int BUFFER_SIZE = 8192;
+	char Buffer[BUFFER_SIZE];
+
+	int ReadPos = 0;
+	int WritePos = 0;
+
 	while (bRun)
 	{
-		/* ===============================
-		   1. ��� ���� �ޱ�
-		   =============================== */
-		FPacketHeader Header;
-		int Received = 0;
+		//UE_LOG(LogTemp, Warning, TEXT("Thread Socket ptr = %p"), Socket);
+		// 🔥 1. recv (데이터 쌓기)
+		int len = recv(Sock, Buffer + WritePos, BUFFER_SIZE - WritePos, 0);
 
-		while (Received < sizeof(FPacketHeader))
+		if (len == SOCKET_ERROR)
 		{
-			int Len = recv(Sock,
-				reinterpret_cast<char*>(&Header) + Received,
-				sizeof(FPacketHeader) - Received,
-				0);
-
-			if (Len <= 0)
+			int err = WSAGetLastError();
+			if (err == WSAEWOULDBLOCK)
 			{
-				UE_LOG(LogTemp, Error, TEXT("Header recv failed"));
-				return 0;
+				// 데이터 없음 → 잠깐 쉬고 루프 계속
+				FPlatformProcess::Sleep(0.001f); // 1ms
+				continue;
 			}
-			Received += Len;
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("recv error: %d"), err);
+				break;
+			}
 		}
 
-		/* ===============================
-		   2. ��Ŷ Ÿ�� �б�
-		   =============================== */
-		switch ((EPacketType)Header.Type)
+		else if (len == 0)
 		{
-		case EPacketType::Bullet:
+			UE_LOG(LogTemp, Warning, TEXT("Server disconnected"));
+			break;
+		}
+
+		
+
+		WritePos += len;
+
+		// 🔥 2. 패킷 파싱 루프
+		while (true)
 		{
-			FServerBullet Bullet;
-			Bullet.Header = Header;
+			int DataSize = WritePos - ReadPos;
 
-			int BodySize = sizeof(FServerBullet) - sizeof(FPacketHeader);
-			int BodyReceived = 0;
+			// 2-1. 헤더 부족하면 대기
+			if (DataSize < sizeof(FPacketHeader))
+				break;
 
-			while (BodyReceived < BodySize)
+			FPacketHeader* Header =
+				reinterpret_cast<FPacketHeader*>(Buffer + ReadPos);
+
+			//UE_LOG(LogTemp, Warning, TEXT("Recv Header Size: %d"), Header->Size);
+			// 🔥 안전 체크 (이거 중요)
+			if (Header->Size <= 0 || Header->Size > 10000)
 			{
-				int Len = recv(Sock,
-					reinterpret_cast<char*>(&Bullet) + sizeof(FPacketHeader) + BodyReceived,
-					BodySize - BodyReceived,
-					0);
-
-				if (Len <= 0)
-				{
-					UE_LOG(LogTemp, Error, TEXT("Bullet recv failed"));
-					return 0;
-				}
-				BodyReceived += Len;
+				UE_LOG(LogTemp, Error, TEXT("Invalid packet size: %d"), Header->Size);
+				bRun = false;
+				break;
 			}
 
-			BulletQueue->Enqueue(Bullet);
-			Server->SetBulletPacket(Bullet);
+			// 2-2. 패킷 전체 도착 안했으면 대기
+			if (DataSize < Header->Size)
+				break;
 
-			
-			AsyncTask(ENamedThreads::GameThread, [this]()
-				{
-					if (Server)
+			// 🔥 3. 패킷 처리
+			char* PacketPtr = Buffer + ReadPos;
+
+			switch ((EPacketType)Header->Type)
+			{
+			case EPacketType::Bullet:
+			{
+				FServerBullet* Bullet = reinterpret_cast<FServerBullet*>(PacketPtr);
+				BulletQueue->Enqueue(*Bullet);
+
+				AsyncTask(ENamedThreads::GameThread, [this, Bullet]()
 					{
-						Server->SpawnBullet();
-					}
-				});
-			
-			break;
-		}
-
-		case EPacketType::Character:
-		{
-			FCharacterPacket Character;
-			Character.Header = Header;
-
-			int BodySize = sizeof(FCharacterPacket) - sizeof(FPacketHeader);
-			int BodyReceived = 0;
-
-			while (BodyReceived < BodySize)
-			{
-				int Len = recv(Sock,
-					reinterpret_cast<char*>(&Character) + sizeof(FPacketHeader) + BodyReceived,
-					BodySize - BodyReceived,
-					0);
-
-				if (Len <= 0)
-				{
-					UE_LOG(LogTemp, Error, TEXT("Character recv failed"));
-					return 0;
-				}
-				BodyReceived += Len;
+						if (Server)
+							Server->SpawnBullet(*Bullet);
+					});
+				break;
 			}
 
-			CharacterQueue->Enqueue(Character);
-			Server->SetCharacterPacket(Character);
-			//
-			successConnect = true;
-			break;
-		}
-		case EPacketType::InformationText:
-		{
-			FInformationTextPacket TimePacket;
-			TimePacket.Header = Header;
-
-			int BodySize = sizeof(FInformationTextPacket) - sizeof(FPacketHeader);
-			int BodyReceived = 0;
-
-			while (BodyReceived < BodySize)
+			case EPacketType::Character:
 			{
-				int Len = recv(Sock,
-					reinterpret_cast<char*>(&TimePacket) + sizeof(FPacketHeader) + BodyReceived,
-					BodySize - BodyReceived,
-					0);
-
-				if (Len <= 0)
-				{
-					UE_LOG(LogTemp, Error, TEXT("timetext recv failed"));
-					return 0;
-				}
-				BodyReceived += Len;
+				FCharacterPacket* Character = reinterpret_cast<FCharacterPacket*>(PacketPtr);
+				CharacterQueue->Enqueue(*Character);
+				successConnect = true;
+				break;
 			}
 
-			//TimeInformationQueue->Enqueue(TimePacket);
-			int32 ReceivedTime = TimePacket.time;
+			case EPacketType::InformationText:
+			{
+				FInformationTextPacket* TimePacket =
+					reinterpret_cast<FInformationTextPacket*>(PacketPtr);
 
-			AsyncTask(ENamedThreads::GameThread, [this, ReceivedTime]()
-				{
-					if (Server)
+				int32 ReceivedTime = TimePacket->time;
+
+				AsyncTask(ENamedThreads::GameThread, [this, ReceivedTime]()
 					{
-						Server->StartCountdownByPacket(ReceivedTime);
-					}
-				});
-
-			
-			break;
-		}
-		case EPacketType::Grenade:
-		{
-			FGrenadePacket Packet;
-			Packet.Header = Header;
-
-			int BodySize = sizeof(FGrenadePacket) - sizeof(FPacketHeader);
-			int BodyReceived = 0;
-
-			while (BodyReceived < BodySize)
-			{
-				int Len = recv(Sock,
-					reinterpret_cast<char*>(&Packet) + sizeof(FPacketHeader) + BodyReceived,
-					BodySize - BodyReceived,
-					0);
-
-				if (Len <= 0)
-				{
-					UE_LOG(LogTemp, Error, TEXT("grenade recv failed"));
-					return 0;
-				}
-				BodyReceived += Len;
+						if (Server)
+							Server->StartCountdownByPacket(ReceivedTime);
+					});
+				break;
 			}
+			case EPacketType::Redzone:
+			{
+				FSpawnAIPacket* RedzonePacket =
+					reinterpret_cast<FSpawnAIPacket*>(PacketPtr);
 
-			GrenadeQueue->Enqueue(Packet);
-			
-			AsyncTask(ENamedThreads::GameThread, [this]()
-				{
-					if (Server)
+				int32 CenterX = RedzonePacket->X;
+				int32 CenterY = RedzonePacket->Y;
+				int32 CenterZ = RedzonePacket->Z;
+				FVector Center = FVector( CenterX ,CenterY ,CenterZ );
+				AsyncTask(ENamedThreads::GameThread, [this, Center]()
 					{
-						Server->SpawnGrenade();
-					}
-				});
-			break;
-		}
-		case EPacketType::AiSpawn: {
-			FSpawnAIPacket AIPacket;
-			AIPacket.Header = Header;
-
-			int BodySize = sizeof(FSpawnAIPacket) - sizeof(FPacketHeader);
-			int BodyReceived = 0;
-
-			while (BodyReceived < BodySize)
-			{
-				int Len = recv(Sock,
-					reinterpret_cast<char*>(&AIPacket) + sizeof(FPacketHeader) + BodyReceived,
-					BodySize - BodyReceived,
-					0);
-
-				if (Len <= 0)
-				{
-					UE_LOG(LogTemp, Error, TEXT("AI Spawn recv failed"));
-					return 0;
-				}
-				BodyReceived += Len;
+						if (Server)
+							Server->StartRedzone(Center);
+					});
+				break;
 			}
-
-			AISpawnQueue->Enqueue(AIPacket);
-			//Server->SetCharacterPacket(AIPacket);
-			//
-			//successConnect = true;
-			break;
-		}
-		case EPacketType::Damage: {
-			FDamagePacket DmgPacket;
-			DmgPacket.Header = Header;
-
-			int BodySize = sizeof(FDamagePacket) - sizeof(FPacketHeader);
-			int BodyReceived = 0;
-
-			while (BodyReceived < BodySize)
+			case EPacketType::BlueHole:
 			{
-				int Len = recv(Sock,
-					reinterpret_cast<char*>(&DmgPacket) + sizeof(FPacketHeader) + BodyReceived,
-					BodySize - BodyReceived,
-					0);
+				FSpawnAIPacket* BlueHolePacket =
+					reinterpret_cast<FSpawnAIPacket*>(PacketPtr);
 
-				if (Len <= 0)
-				{
-					UE_LOG(LogTemp, Error, TEXT("Damage Spawn recv failed"));
-					return 0;
-				}
-				BodyReceived += Len;
-			}
-
-			DmgQueue->Enqueue(DmgPacket);
-			
-			break;
-		}
-		case EPacketType::Client: {
-			FConnectionPacket ConnectionPacket;
-			ConnectionPacket.Header = Header;
-
-			int BodySize = sizeof(FConnectionPacket) - sizeof(FPacketHeader);
-			int BodyReceived = 0;
-
-			while (BodyReceived < BodySize)
-			{
-				int Len = recv(Sock,
-					reinterpret_cast<char*>(&ConnectionPacket) + sizeof(FPacketHeader) + BodyReceived,
-					BodySize - BodyReceived,
-					0);
-
-				if (Len <= 0)
-				{
-					UE_LOG(LogTemp, Error, TEXT("connection Spawn recv failed"));
-					return 0;
-				}
-				BodyReceived += Len;
-			}
-
-			ConnectQueue->Enqueue(ConnectionPacket);
-			
-
-			break;
-		}
-		case EPacketType::Death:
-		{
-			FDeathPacket Packet;
-			Packet.Header = Header;
-
-			int BodySize = sizeof(FDeathPacket) - sizeof(FPacketHeader);
-			int BodyReceived = 0;
-
-			while (BodyReceived < BodySize)
-			{
-				int Len = recv(Sock,
-					reinterpret_cast<char*>(&Packet) + sizeof(FPacketHeader) + BodyReceived,
-					BodySize - BodyReceived,
-					0);
-
-				if (Len <= 0)
-				{
-					UE_LOG(LogTemp, Error, TEXT("Death recv failed"));
-					return 0;
-				}
-				BodyReceived += Len;
-			}
-
-			DeathQueue->Enqueue(Packet);
-
-			AsyncTask(ENamedThreads::GameThread, [this]()
-				{
-					if (Server)
+				int32 CenterX = BlueHolePacket->X;
+				int32 CenterY = BlueHolePacket->Y;
+				int32 CenterZ = BlueHolePacket->Z;
+				FVector Center = FVector(CenterX, CenterY, CenterZ);
+				AsyncTask(ENamedThreads::GameThread, [this, Center]()
 					{
-						Server->SpawnGrenade();
-					}
-				});
-			break;
+						if (Server)
+							Server->StartBlueHole(Center);
+					});
+				break;
+			}
+			case EPacketType::Grenade:
+			{
+				FGrenadePacket* Packet = reinterpret_cast<FGrenadePacket*>(PacketPtr);
+				GrenadeQueue->Enqueue(*Packet);
+
+				AsyncTask(ENamedThreads::GameThread, [this]()
+					{
+						if (Server)
+							Server->SpawnGrenade();
+					});
+				break;
+			}
+
+			case EPacketType::AiSpawn:
+			{
+				FSpawnAIPacket* AIPacket = reinterpret_cast<FSpawnAIPacket*>(PacketPtr);
+				AISpawnQueue->Enqueue(*AIPacket);
+				break;
+			}
+
+			case EPacketType::Client:
+			{
+				FConnectionPacket* Conn = reinterpret_cast<FConnectionPacket*>(PacketPtr);
+				ConnectQueue->Enqueue(*Conn);
+				break;
+			}
+
+			case EPacketType::Death:
+			{
+				FDeathPacket* Packet = reinterpret_cast<FDeathPacket*>(PacketPtr);
+				DeathQueue->Enqueue(*Packet);
+				break;
+			}
+
+			case EPacketType::Item:
+			{
+				FItemPacket* Packet = reinterpret_cast<FItemPacket*>(PacketPtr);
+				ItemSpawnQueue->Enqueue(*Packet);
+				break;
+			}
+
+			case EPacketType::Melee:
+			{
+				FServerBullet* Melee = reinterpret_cast<FServerBullet*>(PacketPtr);
+				MeleeQueue->Enqueue(*Melee);
+
+				AsyncTask(ENamedThreads::GameThread, [this]()
+					{
+						if (Server)
+							Server->SpawnMelee();
+					});
+				break;
+			}
+
+			default:
+				UE_LOG(LogTemp, Warning, TEXT("Unknown packet type: %d"), Header->Type);
+				break;
+			}
+
+			// 🔥 4. 읽은 만큼 이동
+			ReadPos += Header->Size;
 		}
-		default:
-			UE_LOG(LogTemp, Warning, TEXT("Unknown packet type: %d"), Header.Type);
-			break;
+
+		// 🔥 5. 버퍼 정리
+		if (ReadPos == WritePos)
+		{
+			ReadPos = WritePos = 0;
 		}
+		else if (ReadPos > 0)
+		{
+			memmove(Buffer, Buffer + ReadPos, WritePos - ReadPos);
+			WritePos -= ReadPos;
+			ReadPos = 0;
+		}
+
+		//Server->MoveClient(5);
 	}
-	return 0;	
+
+	return 0;
 }
+
 
 void ClientTrd::Exit()
 {
@@ -345,10 +274,12 @@ void ClientTrd::Exit()
 	SOCKET Sock = reinterpret_cast<SOCKET>(Socket);
 	if (Sock)
 	{
-		// Socket ������ ���� Winsock ����� ����
+		// Socket 연결을 끊고 Winsock 사용을 종료
 		closesocket(Sock);
 		//WSACleanup();
 	}*/
+
+	UE_LOG(LogTemp, Error, TEXT("ClientTrd Exit"));
 }
 
 void ClientTrd::Stop()

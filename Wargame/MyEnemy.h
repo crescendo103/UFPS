@@ -4,8 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-
+#include "TypeDefine.h"
 #include "MyEnemy.generated.h"
+
 
 
 class UMyServer;
@@ -29,7 +30,7 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	void SetSPD(float speed, FVector position, FVector direction, bool isjump, bool isfire, bool isdeath);
+	void SetSPD(FEnemyState EnemyData);
 	//virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 	void SetIgnoreCharacterId(int id);
 	int GetIgnoreCharacterId();
@@ -48,6 +49,11 @@ public:
 	bool IsFire;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Anim")
 	bool IsDeath;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Anim")
+	bool IsHeal;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Anim")
+	bool IsHaveGun;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Myserver")
 	UMyServer* MyServer;
 	

@@ -3,7 +3,8 @@
 
 #include "WeaponActor.h"
 #include "Components/SphereComponent.h"
-
+#include "MyCharacter.h"
+//#include "../../../../../../../Program Files/Epic Games/UE_5.4/Engine/Plugins/Experimental/Mutable/Source/MutableRuntime/Public/MuR/System.h"
 // Sets default values
 AWeaponActor::AWeaponActor()
 {
@@ -34,6 +35,11 @@ AWeaponActor::AWeaponActor()
     
 
     bPickedUp = false;
+    EffectComponent = CreateDefaultSubobject<UItemEffectComponent>(TEXT("NIEF"));
+    EffectComponent->SetupAttachment(RootComponent);
+
+    SpawnComponent = CreateDefaultSubobject<UWeaponUseComponent>(TEXT("SPItem"));
+    SpawnComponent->SetupAttachment(Mesh, TEXT("SpawnPoint"));
 }
 
 // Called when the game starts or when spawned
@@ -146,3 +152,48 @@ AWeaponCompo* AWeaponActor::GetMyGunCompo()
     return myGunCompo;
 }
 
+void AWeaponActor::UseItem()
+{
+    if (EffectComponent)
+    {
+        EffectComponent->PlayEffect();
+    }
+}
+
+void AWeaponActor::SpawnItem(FVector startPos, FVector startRot)
+{
+    if (SpawnComponent)
+    {
+        FVector startedPos = Mesh->GetSocketLocation(TEXT("SpawnPoint"));
+        //FVector startRot = Mesh->GetSocketRotation(TEXT("SpawnPoint")).Vector();
+        SpawnComponent->UseWeapon(Owner, startedPos, startRot);
+    }
+}
+
+void AWeaponActor::SetMyOwner(AMyCharacter* myowner)
+{
+    Owner = myowner;
+}
+
+void AWeaponActor::sendItemPacket()
+{
+    FItemPacket packet;
+    FVector ItemPos = GetActorLocation();
+    packet.Header.Type = (int32)EPacketType::Item;
+    packet.Header.Size = sizeof(FItemPacket);
+    packet.X = ItemPos.X;
+    packet.Y = ItemPos.Y;
+    packet.Z = ItemPos.Z;
+    packet.OwnerId = -1;//임시
+    packet.ItemRow = ItemRowName;
+    packet.ItemSpawnID = ItemSpawnID;
+    packet.ShouldRemove = false;
+
+    UMyServer* MyServer = GetGameInstance()->GetSubsystem<UMyServer>();
+    MyServer->MoveItem(packet);
+}
+
+int32 AWeaponActor::GetItemSpawnID()
+{
+    return ItemSpawnID;
+}

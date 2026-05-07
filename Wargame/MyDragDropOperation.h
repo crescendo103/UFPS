@@ -22,5 +22,6 @@ public:
     
     UPROPERTY()
     AActor* ItemActor=nullptr;
-    
+    UPROPERTY()
+    int32 ItemSpawnID;
 };

@@ -4,6 +4,9 @@
 
 #include "TypeDefine.generated.h"
 
+class AActor;
+class UMyItem;
+
 enum class EPacketType : int
 {
     Bullet = 1,
@@ -13,7 +16,11 @@ enum class EPacketType : int
     AiSpawn =5,
     Damage=6,
     Client=7,
-    Death=8
+    Death=8,
+    Melee=9,
+    Redzone=10,
+    BlueHole=11,
+    Item=12
 };
 
 UENUM(BlueprintType)
@@ -50,7 +57,7 @@ struct FServerBullet
 
     UPROPERTY()
     FPacketHeader Header;
-    //1총알, 2캐릭터 위치
+    //1총알, 2캐릭터 위치, 9펀치
 
     UPROPERTY()
     int32 BulletId;
@@ -115,6 +122,11 @@ struct FCharacterPacket
 
     UPROPERTY()
     bool IsDeath;
+
+    UPROPERTY()
+    bool IsHeal;
+    UPROPERTY()
+    bool IsHaveGun;
 
 };
 USTRUCT(BlueprintType)
@@ -213,6 +225,44 @@ struct FSpawnAIPacket
 };
 
 USTRUCT(BlueprintType)
+struct FItemPacket
+{
+    GENERATED_BODY()
+
+    UPROPERTY()
+    FPacketHeader Header;
+
+    UPROPERTY()
+    float X;
+    UPROPERTY()
+    float Y;
+    UPROPERTY()
+    float Z;
+
+    UPROPERTY()
+    int32 OwnerId;
+
+    UPROPERTY()
+    int32 ItemRow;
+    UPROPERTY()
+    int32 ItemSpawnID;
+
+    UPROPERTY()
+    bool ShouldRemove;
+};
+
+USTRUCT(BlueprintType)
+struct FItems
+{
+    GENERATED_BODY()
+
+    UPROPERTY()
+    int itemRow;
+    UPROPERTY()
+    int count;
+};
+
+USTRUCT(BlueprintType)
 struct FDamagePacket
 {
     GENERATED_BODY()
@@ -226,6 +276,8 @@ struct FDamagePacket
     int CharacterId;
     UPROPERTY()
     int Damage;    
+    UPROPERTY()
+    FItems HaveItems[20];
 };
 
 
@@ -238,7 +290,9 @@ struct FConnectionPacket
     FPacketHeader Header;
     UPROPERTY()
     int order;
-    
+
+
+    char Name[8];
 };
 
 USTRUCT(BlueprintType)
@@ -253,4 +307,50 @@ struct FDeathPacket
     int aiid;
     UPROPERTY()
     int characterid;
+
+    char  Name[8];
+
+    char   CausedName[8];
+    UPROPERTY()
+    int causedCharacterId;
+};
+
+USTRUCT(BlueprintType)
+struct FInventorySlot
+{
+    GENERATED_BODY()
+
+    UPROPERTY()
+    int32 ItemID = -1;
+
+    UPROPERTY()
+    AActor* Actor = nullptr;
+
+    UPROPERTY()
+    UMyItem* Widget = nullptr;
+    UPROPERTY()
+    int32 ItemSpanwID = 0;
+};
+
+USTRUCT(BlueprintType)
+struct FEnemyState
+{
+    GENERATED_BODY()
+
+    UPROPERTY()
+    float Speed;
+    UPROPERTY()
+    FVector Position;
+    UPROPERTY()
+    FVector Direction;
+    UPROPERTY()
+    bool  isjump;
+    UPROPERTY()
+    bool   isfire;
+    UPROPERTY()
+    bool isdeath;
+    UPROPERTY()
+    bool isHeal;
+    UPROPERTY()
+    bool isHaveGun;
 };

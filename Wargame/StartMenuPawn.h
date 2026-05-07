@@ -35,8 +35,6 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	void MoveEnemy(int order);
-		
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Myserver")
 	UMyServer* MyServer;
@@ -54,7 +52,10 @@ public:
 	UPROPERTY()
 	UStartMenuWidget* StartMenuWidget;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Settings")
 	FVector TargetLocation = FVector(-126763.797849, -3192.599134, 62.209195);
+	UPROPERTY(EditDefaultsOnly, Category = "Settings")
+	int32 MyOrder=0;
 	//FRotator TargetRot;
 
 	float MoveSpeed = 0.50f; // Å¬¼ö·Ï »¡¶óÁü

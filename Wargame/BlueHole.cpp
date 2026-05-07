@@ -28,6 +28,7 @@ ABlueHole::ABlueHole()
     const float DefaultMeshRadius = 50.f; // Shape_Sphere 기본 반지름
     float Scale = CurrentRadius / DefaultMeshRadius;
     ZoneMesh->SetWorldScale3D(FVector(Scale));
+    TargetRadius = 3000.f;
 }
 
 // Called when the game starts or when spawned
@@ -44,8 +45,8 @@ void ABlueHole::BeginPlay()
     ZoneSphere->OnComponentEndOverlap.AddDynamic(
         this,
         &ABlueHole::OnOverlapEnd
-    );*/
-
+    );
+    */
     Player = Cast<AMyCharacter>(GetWorld()->GetFirstPlayerController()->GetPawn());
 
     GetWorldTimerManager().SetTimer(
@@ -58,6 +59,23 @@ void ABlueHole::BeginPlay()
     MeshBaseRadius = ZoneMesh->GetStaticMesh()->GetBounds().SphereRadius;
     isDone = false;
     
+
+
+    //ACharacter* Player = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
+
+    if (Player && ZoneSphere->IsOverlappingActor(Player))
+    {
+        // 자기장 안 → 정상 화면
+        Player->InZone();
+    }
+
+    GetWorld()->GetTimerManager().SetTimer(
+        timerHandle,
+        this,
+        &ABlueHole::SetTargetRadius,
+        60.0f,
+        true
+    );
 }
 
 // Called every frame
@@ -76,7 +94,7 @@ void ABlueHole::Tick(float DeltaTime)
 
     ZoneSphere->SetSphereRadius(CurrentRadius, true);
 
-    if (CurrentRadius <= 3000.f) {
+    if (CurrentRadius <= TargetRadius) {
         isDone = true;
     }
 
@@ -107,20 +125,22 @@ void ABlueHole::Tick(float DeltaTime)
 /*
 void ABlueHole::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-    AMyCharacter* Player = Cast<AMyCharacter>(OtherActor);
-    if (!Player) return;
-
+    
     // 자기장 안 → 정상 화면
-    Player->InZone();
+    if (Player == Cast<AMyCharacter>(OtherActor)) {
+        Player->InZone();
+    }
+    
 }
 
 void ABlueHole::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-    AMyCharacter* Player = Cast<AMyCharacter>(OtherActor);
-    if (!Player) return;
-
-    // 자기장 밖 → 파란 화면
-    Player->OutZone();
+    
+    if (Player == Cast<AMyCharacter>(OtherActor)) {
+        // 자기장 밖 → 파란 화면
+        Player->OutZone();
+    }
+    
 }
 */
 void ABlueHole::CheckPlayersInZone()
@@ -158,6 +178,11 @@ void ABlueHole::SetSize()
 
     float Scale = CurrentRadius / MeshRadius;
     ZoneMesh->SetWorldScale3D(FVector(Scale));
+}
+
+void ABlueHole::SetTargetRadius()
+{
+    TargetRadius -= TargetRadius;
 }
 
 

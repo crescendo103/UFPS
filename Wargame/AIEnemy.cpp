@@ -54,7 +54,7 @@ AAIEnemy::AAIEnemy()
     IsDead = false;
     HP = 100;
 
-    AiId = -50;//임시값
+    AiId = -1;//임시값
     FirstInit = false;
     
 
@@ -97,9 +97,10 @@ void AAIEnemy::Tick(float DeltaTime)
 
     UpdateAnimationVariables();
     
-    if (!FirstInit) {
+    if (!FirstInit && AiId!=-1) {
 
         UE_LOG(LogTemp, Warning, TEXT("inside First Init"));
+        
         float Speed = GetCharacterMovement()->Velocity.Size();
         FVector MoveDir = GetVelocity().GetSafeNormal();//실제 이동 방향
         FVector ForwardDir = GetActorForwardVector();//바라보는방향
@@ -119,12 +120,14 @@ void AAIEnemy::Tick(float DeltaTime)
         man.Sendtime = FPlatformTime::Seconds();
         man.IsJump = true;
         man.IsFire = fireing;
+        man.IsDeath = false;
+        man.IsHeal = false;
 
-
+        
         if (MyServer) {
             MyServer->MoveAI(man);
         }
-
+        
         FirstInit = true;
     }
     
@@ -495,13 +498,16 @@ void AAIEnemy::RequestNewPos(float x, float y, float z, bool Jump, bool Fire)
     man.Sendtime = FPlatformTime::Seconds();
     man.IsJump = Jump;
     man.IsFire = Fire;
+    man.IsDeath = false;
+    man.IsHeal = false;
 
-
+    
     if (MyServer) {
         MyServer->MoveAI(man);
     }
+    
 
-    //BB->SetValueAsBool("TargetReached", false);
+    BB->SetValueAsBool("TargetReached", false);
 
 }
 

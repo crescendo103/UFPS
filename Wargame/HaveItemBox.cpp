@@ -56,12 +56,9 @@ bool UHaveItemBox::NativeOnDrop(
         Cast<UMyDragDropOperation>(InOperation);
 
     if (!DragOp || !OwnerInventory)
-        return false;
-
-    
-
+        return false;  
     //
-    OwnerInventory->AddHaveItemBox(DragOp->ItemID, DragOp->ItemActor);
+    OwnerInventory->AddHaveItemBox(DragOp->ItemID, DragOp->ItemActor, DragOp->ItemSpawnID);
    
     //아이템 좌표 이동
 
@@ -86,6 +83,7 @@ bool UHaveItemBox::NativeOnDrop(
     
     //OwnerInventory->RemoveItemWidget(DragOp->FromSlotIndex);    
     OwnerInventory->RemoveItemWidgetNoItemSpawn(DragOp->FromSlotIndex);
+    OwnerInventory->RemoveFloorItem(DragOp->ItemActor);//있다면
 
     UE_LOG(LogTemp, Log,
         TEXT("추가 영역"));

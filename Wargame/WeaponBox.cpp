@@ -30,11 +30,12 @@ bool UWeaponBox::NativeOnDrop(
     if (!DragOp || !OwnerInventory)
         return false;
     
-    OwnerInventory->AddWeaponBox(DragOp->ItemID, DragOp->ItemActor);
+    OwnerInventory->AddWeaponBox(DragOp->ItemID, DragOp->ItemActor, DragOp->ItemSpawnID);
     OwnerInventory->Owner->WeaponAttach(DragOp->ItemActor, "backSocket");
 
     //OwnerInventory->RemoveItemWidget(DragOp->FromSlotIndex);    
     OwnerInventory->RemoveItemWidgetNoItemSpawn(DragOp->FromSlotIndex);
+    OwnerInventory->RemoveFloorItem(DragOp->ItemActor);//있다면
 
     OwnerInventory->ActiveSecondWeaponToPlayer(DragOp->ItemActor);
     //
@@ -51,7 +52,7 @@ void UWeaponBox::SetOwnerInventory(UMyInventory* InInventory)
     OwnerInventory = InInventory;
 }
 
-USizeBox* UWeaponBox::GetScrollBox()
+USizeBox* UWeaponBox::GetSizeBox()
 {
     return WeaponBox;
 }

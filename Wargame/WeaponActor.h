@@ -6,12 +6,15 @@
 #include "GameFramework/Actor.h"
 #include "Components/SphereComponent.h"
 
-
+#include "ItemEffectComponent.h"
 #include "SpawnItemActor.h"
 #include "HighlightInterface.h"
+#include "WeaponUseComponent.h"
+
 #include "WeaponActor.generated.h"
 
 class AWeaponCompo;
+class AMyCharacter;
 
 UCLASS(Blueprintable)
 class FPS_API AWeaponActor : public AActor, public IHighlightInterface, public ISpawnItemActor
@@ -66,4 +69,21 @@ public:
 
 	void SetMyGunCompo(AWeaponCompo* compo);
 	AWeaponCompo* GetMyGunCompo();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "feature")
+	UItemEffectComponent* EffectComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "feature")
+	UWeaponUseComponent* SpawnComponent;
+
+	void UseItem();
+	void SpawnItem(FVector startPos, FVector startRot);
+
+	void SetMyOwner(AMyCharacter* myowner);
+	AMyCharacter* Owner;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ItemID")
+	int32 ItemSpawnID=0;
+
+	void sendItemPacket();
+	int32 GetItemSpawnID();
 };

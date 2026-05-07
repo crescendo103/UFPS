@@ -103,6 +103,8 @@ public:
     UInputAction* TestAction;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
     UInputAction* GunCompoAction;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+    UInputAction* GlobalMapAction;
 
     // 새로운 컴포넌트들을 UPROPERTY로 선언
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
@@ -135,6 +137,8 @@ public:
     float Pitch;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Animation")
     bool bIsDeath;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Animation")
+    bool bIsHaveGun;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SocketName")
     FName GunSocket;
@@ -158,20 +162,20 @@ public:
     UPROPERTY()
     UMyInventory* InventoryWidget;
 
-
+    
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
     TSubclassOf<AWeaponBase> WeaponClass;
+    /*
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
     TSubclassOf<AMyGrenade> GrenadeClass;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-    TSubclassOf<ABullet> BulletClass;
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-    TSubclassOf<AVisualGrenade> VisualGrenadeClass;
+    TSubclassOf<ABullet> BulletClass;    
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
     TSubclassOf<AMyEnemy> EnermyClass;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-    TSubclassOf<AAIEnemy> AIClass;
-    
+    TSubclassOf<AAIEnemy> AIClass;*/
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+    TSubclassOf<AVisualGrenade> VisualGrenadeClass;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
     UWeaponComponent* WeaponComponent;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "WeaponRay")
@@ -189,11 +193,13 @@ public:
     int32 bulletId;
     
     UPROPERTY(VisibleAnywhere, Category = "MinimapCamera")
-    class USpringArmComponent* minimapCameraBoom;
+    USpringArmComponent* minimapCameraBoom;
     UPROPERTY(VisibleAnywhere, Category = "MinimapCamera")
-    class USceneCaptureComponent2D* minimapCapture;
+    USceneCaptureComponent2D* minimapCapture;
     UPROPERTY(VisibleAnywhere, Category = "MinimapCamera")
-    class UPaperSpriteComponent* minimapSprite;
+    UPaperSpriteComponent* minimapSprite;
+    UPROPERTY()
+    UTextureRenderTarget2D* MinimapRT;
 
     int32 test;
 
@@ -269,12 +275,36 @@ public:
 
     void GunCompoActive();
     void GUnCompoDeActive();
-    void Die();
+    void Die(int32 CauserCharacterId);
 
     UPROPERTY()
     AWeaponActor* CurrentGunWeapon;
+    
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
     TSubclassOf<AActor> SubItemClass;
     
+    //추가
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+    UAnimMontage* PunchMontage;
+    
+    bool bPunchCollisionActive = false;
+
+    void PlayPunch();
+    void SpawnPunchCollision();
+    void EndPunchCollision();
+
+    bool bGlobalMap = false;
+    void AddViewPortGlobalMap();
+
+
+    public:
+        UTextureRenderTarget2D* GetMinimapRT() const { return MinimapRT; }
+
+        float SendTimer = 0;
+
+        UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "redZone")
+        TSubclassOf<ABomb> BombClass;
+        UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BlueHole")
+        TSubclassOf<ABlueHole> BlueHoleClass;
 };

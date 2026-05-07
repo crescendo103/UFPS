@@ -33,14 +33,12 @@ ABullet::ABullet()
 	
 
 	
-	//CollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &ABullet::OnOverlapSphere);
+	CollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &ABullet::OnOverlapSphere);
 
 	// Audio
 	BulletAudio = CreateDefaultSubobject<USoundComponent>(TEXT("BulletAudio"));
 	BulletAudio->SetupAttachment(RootComponent);
 	BulletAudio->bAutoActivate = false; // 자동 재생 끔
-
-	firstOverlap = false;
 
 	
 }
@@ -49,24 +47,28 @@ void ABullet::SetBulletOwner(int32 owner)
 {
 	BulletOwner = owner;
 }
-
+int32 ABullet::GetBulletOwner()
+{
+	return BulletOwner;
+}
+/*
 void ABullet::ActiveBulletOverlap()
 {
 	CollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &ABullet::OnOverlapSphere);
-}
+}*/
 
 // Called when the game starts or when spawned
 void ABullet::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	/*
 	GetWorld()->GetTimerManager().SetTimer(
 		OverlapTimerHandle,
 		this,
 		&ABullet::ActiveBulletOverlap,
 		0.000001f,
 		false
-	);
+	);*/
 
 	SetLifeSpan(5.0f);
 
@@ -110,21 +112,33 @@ void ABullet::OnOverlapSphere(UPrimitiveComponent* OverlappedComponent, AActor* 
 {
 	if (!OtherActor || OtherActor == GetOwner())
 		return;
+		
 
-	//처음은 무시
-	if (!firstOverlap) {
-		firstOverlap = true;
+	// 1. Owner와 겹치면 무조건 무시
+	/*
+	if (OtherActor == GetOwner()) {
+		UE_LOG(LogTemp, Warning, TEXT("ignore Owner"));
 		return;
-	}
+	}*/
+		
 
-	FString ActorName = OtherActor->GetName();
-	FString CompName = OtherComp ? OtherComp->GetName() : TEXT("None");
+
+
+	UClass* Class = OtherActor->GetClass();
+	FString ClassName = Class->GetName();
+
+	FString ParentName = Class->GetSuperClass()
+		? Class->GetSuperClass()->GetName()
+		: TEXT("None");
 
 	GEngine->AddOnScreenDebugMessage(
 		-1,
 		3.f,
-		FColor::Green,
-		FString::Printf(TEXT("Overlap Actor: %s | Component: %s"), *ActorName, *CompName)
+		FColor::Cyan,
+		FString::Printf(TEXT("Actor: %s | Class: %s | Parent: %s"),
+			*OtherActor->GetName(),
+			*ClassName,
+			*ParentName)
 	);
 
 	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
@@ -144,37 +158,23 @@ void ABullet::OnOverlapSphere(UPrimitiveComponent* OverlappedComponent, AActor* 
 
 	if (bPlayed) return;
 
+	
+
 	if (OtherActor) //&& OtherActor != GetOwner())
 	{
+		/*
+		BulletAudio->PlaySound();
+		bPlayed = true;
+		*/
+		
 		AMyEnemy* mc = Cast<AMyEnemy>(OtherActor);
-
-		if (mc)
-		{
-			int PlayerId = mc->GetIgnoreCharacterId();
-
-			UE_LOG(LogTemp, Warning,
-				TEXT("mc Exists ✔ | mc PlayerID = %d | BulletOwner = %d"),
-				PlayerId,
-				BulletOwner
-			);
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning,
-				TEXT("mc is NULL ❌ | BulletOwner = %d"),
-				BulletOwner
-			);
-		}
-
-
-
 
 		if (mc && mc->GetIgnoreCharacterId() != BulletOwner) {
 			BulletAudio->PlaySound();
 			bPlayed = true;
 
 		}
-
+		
 	}
 	
 }

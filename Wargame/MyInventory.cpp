@@ -46,6 +46,8 @@ void UMyInventory::NativeConstruct()
     WeaponBoxPlayerWidget->AddToViewport(); // ZOrder 높게
     WeaponBoxPlayerWidget->SetVisibility(ESlateVisibility::Hidden);
 
+    
+
     GunCompoWidget = CreateWidget<UInventoryGunCompoBox>(GetWorld(), GunCompoWidgetClass);
     GunCompoWidget->SetOwnerInventory(this);
     //GunCompoWidget->SetOwner(Owner);
@@ -53,217 +55,295 @@ void UMyInventory::NativeConstruct()
     GunCompoWidget->SetVisibility(ESlateVisibility::Hidden);
 }
 
-void UMyInventory::SwapItems(int32 From, int32 To)
+void UMyInventory::RemoveFloorItem(AActor* Actor)
 {
-    if (!ItemIDs.IsValidIndex(From) ||
-        !ItemIDs.IsValidIndex(To) ||
-        From == To)
+    if (!Actor)
         return;
 
-    // 데이터 스왑
-    Swap(ItemIDs[From], ItemIDs[To]);
+    UMyItem** FoundWidget = FloorActorWidgets.Find(Actor);
 
-   
-    // 2️⃣ 위젯 스왑
-    UMyItem* FromWidget = nullptr;
-    UMyItem* ToWidget = nullptr;
+    if (!FoundWidget)
+        return;
 
-    ItemWidgets.RemoveAndCopyValue(From, FromWidget);
-    ItemWidgets.RemoveAndCopyValue(To, ToWidget);
+    if (*FoundWidget)
+    {
+        (*FoundWidget)->RemoveFromParent();
+    }
 
-    if (FromWidget)
-        ItemWidgets.Add(To, FromWidget);
+    FloorActorWidgets.Remove(Actor);
+}
 
-    if (ToWidget)
-        ItemWidgets.Add(From, ToWidget);
+void UMyInventory::SwapItems(int32 From, int32 To)
+{
+    FInventorySlot* SlotA = Slots.Find(From);
+    FInventorySlot* SlotB = Slots.Find(To);
 
-    // 3️⃣ 위젯 내부 데이터 갱신
-    if (FromWidget)
-        FromWidget->Init(To, ItemIDs[To]);
+    if (!SlotA || !SlotB) return;
 
-    if (ToWidget)
-        ToWidget->Init(From, ItemIDs[From]);
+    Swap(*SlotA, *SlotB);
 
-    // ✅ UI 갱신
+    if (SlotA->Widget)
+        SlotA->Widget->Init(From, SlotA->ItemID, SlotA->Actor, SlotA->ItemSpanwID);
+
+    if (SlotB->Widget)
+        SlotB->Widget->Init(To, SlotB->ItemID, SlotB->Actor, SlotB->ItemSpanwID);
+
     RefreshSlot(From);
     RefreshSlot(To);
-
-    UE_LOG(LogTemp, Log,
-        TEXT("슬롯 스왑 완료: %d <-> %d"),
-        From, To);
 }
 
 void UMyInventory::RefreshSlot(int32 SlotIdx)
 {
-    /*
-    if (!ItemWidgets.Find(SlotIdx) ||
-        !ItemIDs.IsValidIndex(SlotIdx))
+    FInventorySlot* FoundSlot = Slots.Find(SlotIdx);
+
+    if (!FoundSlot) return;
+
+    if (!FoundSlot->Widget) return;
+
+    const FItemStaticData* StaticData =
+        ItemTable->FindRow<FItemStaticData>(
+            FName(*FString::FromInt(FoundSlot->ItemID)),
+            TEXT("Item Lookup")
+        );
+
+    if (!StaticData) return;
+
+    FoundSlot->Widget->SetItemIcon(StaticData->Icon);
+}
+
+void UMyInventory::AddHaveItemBox(int32 itemId, AActor* actor, int32 itemSpawnID)
+{
+    if (!ItemSlotClass)
         return;
 
-    ItemWidgets[SlotIdx]->Init(
-        SlotIdx,
-        ItemIDs[SlotIdx]
-    );
+    UMyItem* SlotWidget = CreateWidget<UMyItem>(GetWorld(), ItemSlotClass);
+    if (!SlotWidget)
+        return;
+
+    int32 SlotIndex = NextSlotIndex++;
+
+    SlotWidget->Init(SlotIndex, itemId, actor, itemSpawnID);
+    SlotWidget->SetOwnerInventory(this);
+
+    FInventorySlot NewSlot;
+    NewSlot.ItemID = itemId;
+    NewSlot.Actor = actor;
+    NewSlot.Widget = SlotWidget;
+    NewSlot.ItemSpanwID = itemSpawnID;
+
+    Slots.Add(SlotIndex, NewSlot);
+
+    if (!HaveWidget)
+        return;
+
+    UScrollBox* Scroll = HaveWidget->GetHaveScrollBox();
+    if (!Scroll)
+        return;
+
+    UPanelSlot* PanelSlot = Scroll->AddChild(SlotWidget);
+
+    if (UScrollBoxSlot* ScrollSlot = Cast<UScrollBoxSlot>(PanelSlot))
+    {
+        ScrollSlot->SetPadding(FMargin(0.f, 6.f));
+        ScrollSlot->SetHorizontalAlignment(HAlign_Fill);
+    }
+
+    SlotWidget->Refresh();
+}
+
+void UMyInventory::AddFloorItemBox(int32 itemId, AActor* actor, int32 ItemSpanwID)
+{
+    /*
+    if (!ItemSlotClass)
+        return;
+
+    UMyItem* SlotWidget = CreateWidget<UMyItem>(GetWorld(), ItemSlotClass);
+    if (!SlotWidget)
+        return;
+
+    int32 SlotIndex = NextSlotIndex++;
+
+    SlotWidget->Init(SlotIndex, itemId, actor);
+    SlotWidget->SetOwnerInventory(this);
+
+    FInventorySlot NewSlot;
+    NewSlot.ItemID = itemId;
+    NewSlot.Actor = actor;
+    NewSlot.Widget = SlotWidget;
+
+    Slots.Add(SlotIndex, NewSlot);
+
+    if (!FloorItemBox)
+        return;
+
+    UPanelSlot* PanelSlot = FloorItemBox->AddChild(SlotWidget);
+
+    if (UScrollBoxSlot* ScrollSlot = Cast<UScrollBoxSlot>(PanelSlot))
+    {
+        ScrollSlot->SetPadding(FMargin(0.f, 6.f));
+        ScrollSlot->SetHorizontalAlignment(HAlign_Fill);
+    }
+
+    SlotWidget->Refresh();
     */
 
-    if (!ItemIDs.IsValidIndex(SlotIdx))
+    if (!ItemSlotClass || !actor)
         return;
 
-    UMyItem** WidgetPtr = ItemWidgets.Find(SlotIdx);
-    if (!WidgetPtr || !(*WidgetPtr))
+    // 이미 존재하면 추가 안함
+    if (FloorActorWidgets.Contains(actor))
         return;
 
-    const FItemStaticData* StaticData = ItemTable->FindRow<FItemStaticData>(
-        FName(*FString::FromInt(ItemIDs[SlotIdx])),
-        TEXT("Item Lookup")
-    );
-        //ItemTable->FindRow<FItemStaticData>(ItemIDs[SlotIdx]);
+    UMyItem* SlotWidget = CreateWidget<UMyItem>(GetWorld(), ItemSlotClass);
+    if (!SlotWidget)
+        return;
 
-    ItemWidgets[SlotIdx]->SetItemIcon(StaticData->Icon);
-    
-}
+    SlotWidget->Init(-1, itemId, actor, ItemSpanwID);
+    SlotWidget->SetOwnerInventory(this);
 
-void UMyInventory::AddHaveItemBox(int32 itemId, AActor* actor)
-{
+    if (!FloorItemBox)
+        return;
 
-    //HaveWidget->ItemHave(itemId,itemid);
-    UMyItem* slot = nullptr;
+    UPanelSlot* PanelSlot = FloorItemBox->AddChild(SlotWidget);
 
-    slot = CreateWidget<UMyItem>(GetWorld(), ItemSlotClass);
-    if (slot != nullptr) {
-        slot->Init(itemid, itemId, actor); // 슬롯번호, 아이템ID ??
-        slot->SetOwnerInventory(this);
-        ItemIDs.Add(itemId);//진짜 아이템 아이디
-        ///HaveActor.Add(actor);
-        HaveActors.Add(itemid, actor);
-        HaveActorsWithHaveBox.Add(actor,0);//0은 쓰레기값
-    }
-
-    
-    
-    
-    // ScrollBox에 바로 추가
-    //UPanelSlot* PanelSlot = FloorItemBox->AddChild(slot);
-    UPanelSlot* PanelSlot = HaveWidget->GetHaveScrollBox()->AddChild(slot);
     if (UScrollBoxSlot* ScrollSlot = Cast<UScrollBoxSlot>(PanelSlot))
     {
         ScrollSlot->SetPadding(FMargin(0.f, 6.f));
         ScrollSlot->SetHorizontalAlignment(HAlign_Fill);
-        //ScrollSlot->SetHorizontalAlignment(HAlign_Center);
     }
 
-    ///ItemWidgets.Add(slot);
-    ItemWidgets.Add(itemid, slot);
+    SlotWidget->Refresh();
 
-    slot->Refresh();
-
-    itemid++;
+    // FloorActorWidgets에 저장
+    FloorActorWidgets.Add(actor, SlotWidget);
 }
 
-void UMyInventory::AddFloorItemBox(int32 itemId, AActor* actor)
+void UMyInventory::AddWeaponBox(int32 itemId, AActor* actor,int32 ItemSpanwID)
 {
-    //HaveWidget->ItemHave(itemId,itemid);
-    UMyItem* slot = nullptr;
+    if (!ItemSlotClass)
+        return;
 
-    slot = CreateWidget<UMyItem>(GetWorld(), ItemSlotClass);
-    if (slot != nullptr) {
-        slot->Init(itemid, itemId, actor); // 슬롯번호, 아이템ID ??
-        slot->SetOwnerInventory(this);
-        ItemIDs.Add(itemId);//진짜 아이템 아이디
-        HaveActors.Add(itemid, actor);
-    }
+    UMyItem* SlotWidget = CreateWidget<UMyItem>(GetWorld(), ItemSlotClass);
+    if (!SlotWidget)
+        return;
 
+    int32 SlotIndex = NextSlotIndex++;
 
+    SlotWidget->Init(SlotIndex, itemId, actor, ItemSpanwID);
+    SlotWidget->SetOwnerInventory(this);
 
+    FInventorySlot NewSlot;
+    NewSlot.ItemID = itemId;
+    NewSlot.Actor = actor;
+    NewSlot.Widget = SlotWidget;
+    NewSlot.ItemSpanwID = ItemSpanwID;
 
-    // ScrollBox에 바로 추가
-    UPanelSlot* PanelSlot = FloorItemBox->AddChild(slot);
-    //UPanelSlot* PanelSlot = HaveWidget->GetHaveScrollBox()->AddChild(slot);
-    if (UScrollBoxSlot* ScrollSlot = Cast<UScrollBoxSlot>(PanelSlot))
-    {
-        ScrollSlot->SetPadding(FMargin(0.f, 6.f));
-        ScrollSlot->SetHorizontalAlignment(HAlign_Fill);
-        //ScrollSlot->SetHorizontalAlignment(HAlign_Center);
-    }
+    Slots.Add(SlotIndex, NewSlot);
 
-    ItemWidgets.Add(itemid, slot);
+    if (!WeaponBoxWidget)
+        return;
 
-    slot->Refresh();
+    USizeBox* Box = WeaponBoxWidget->GetSizeBox();
+    if (!Box)
+        return;
 
-    itemid++;
+    Box->ClearChildren();
+    Box->SetContent(SlotWidget);
+
+    SlotWidget->Refresh();
 }
 
-void UMyInventory::AddWeaponBox(int32 itemId, AActor* actor)
+
+void UMyInventory::AddWeaponBoxPlayer(int32 itemId, AActor* actor, int32 ItemSpanwID)
 {
-    //HaveWidget->ItemHave(itemId,itemid);
-    UMyItem* slot = nullptr;
-
-    slot = CreateWidget<UMyItem>(GetWorld(), ItemSlotClass);
-    if (slot != nullptr) {
-        slot->Init(itemid, itemId, actor); // 슬롯번호, 아이템ID ??
-        slot->SetOwnerInventory(this);
-        ItemIDs.Add(itemId);//진짜 아이템 아이디
-        
-        HaveActors.Add(itemid, actor);
-        HaveActorsWithHaveBox.Add(actor, 0);//0은 쓰레기값
-    }
-
-
-
-
-    // ScrollBox에 바로 추가
-    //UPanelSlot* PanelSlot = FloorItemBox->AddChild(slot);
-    UPanelSlot* PanelSlot = WeaponBoxWidget->GetScrollBox()->AddChild(slot);
-    if (UScrollBoxSlot* ScrollSlot = Cast<UScrollBoxSlot>(PanelSlot))
+    
+    if (!ItemSlotClass)
     {
-        ScrollSlot->SetPadding(FMargin(0.f, 6.f));
-        ScrollSlot->SetHorizontalAlignment(HAlign_Fill);
-        //ScrollSlot->SetHorizontalAlignment(HAlign_Center);
+        UE_LOG(LogTemp, Error, TEXT("ItemSlotClass NULL"));
+        return;
     }
 
-    ///ItemWidgets.Add(slot);
-    ItemWidgets.Add(itemid, slot);
+    UMyItem* SlotWidget = CreateWidget<UMyItem>(GetWorld(), ItemSlotClass);
 
-    slot->Refresh();
+    if (!SlotWidget)
+    {
+        UE_LOG(LogTemp, Error, TEXT("SlotWidget IS NULL"));
+        return;
+    }
 
-    itemid++;
+    int32 SlotIndex = NextSlotIndex++;
+
+    SlotWidget->Init(SlotIndex, itemId, actor, ItemSpanwID);
+    SlotWidget->SetOwnerInventory(this);   
+
+    FInventorySlot NewSlot;
+    NewSlot.ItemID = itemId;
+    NewSlot.Actor = actor;
+    NewSlot.Widget = SlotWidget;
+    NewSlot.ItemSpanwID = ItemSpanwID;
+
+    Slots.Add(SlotIndex, NewSlot);
+
+    if (!WeaponBoxPlayerWidget)
+    {
+        UE_LOG(LogTemp, Error, TEXT("WeaponBoxPlayerWidget NULL"));
+        return;
+    }
+
+    USizeBox* Box = WeaponBoxPlayerWidget->GetSizeBox();
+
+    if (!Box)
+    {
+        UE_LOG(LogTemp, Error, TEXT("WeaponBox(SizeBox) NULL"));
+        return;
+    }
+    
+    // 기존 위젯 확인
+    if (Box->GetContent())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Existing Child: %s -> Removing"),
+            *Box->GetContent()->GetName());
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("No Existing Child In WeaponBox"));
+    }
+
+    Box->ClearChildren();
+    UE_LOG(LogTemp, Warning, TEXT("WeaponBox Cleared"));
+
+    //Box->AddChild(SlotWidget);
+    Box->SetContent(SlotWidget);
+    UE_LOG(LogTemp, Warning, TEXT("SlotWidget Added To WeaponBox"));
+
+    SlotWidget->Refresh();
+    UE_LOG(LogTemp, Warning, TEXT("SlotWidget Refresh Called"));
+
+
+    // ===== 마지막 검증 로그 =====
+    if (Box->GetContent())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("FINAL CHECK: SizeBox Child = %s"),
+            *Box->GetContent()->GetName());
+
+        if (Box->GetContent() == SlotWidget)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("FINAL CHECK: SlotWidget successfully attached to SizeBox"));
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("FINAL CHECK: SizeBox child is NOT SlotWidget"));
+        }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("FINAL CHECK: SizeBox has NO child after AddChild"));
+    }       
+
+    
 }
 
-void UMyInventory::AddWeaponBoxPlayer(int32 itemId, AActor* actor)
-{
-    //HaveWidget->ItemHave(itemId,itemid);
-    UMyItem* slot = nullptr;
 
-    slot = CreateWidget<UMyItem>(GetWorld(), ItemSlotClass);
-    if (slot != nullptr) {
-        slot->Init(itemid, itemId, actor); // 슬롯번호, 아이템ID ??
-        slot->SetOwnerInventory(this);
-        ItemIDs.Add(itemId);//진짜 아이템 아이디
-
-        HaveActors.Add(itemid, actor);
-        HaveActorsWithHaveBox.Add(actor, 0);//0은 쓰레기값
-    }
-
-
-
-
-    // ScrollBox에 바로 추가
-    //UPanelSlot* PanelSlot = FloorItemBox->AddChild(slot);
-    UPanelSlot* PanelSlot = WeaponBoxPlayerWidget->GetScrollBox()->AddChild(slot);
-    if (UScrollBoxSlot* ScrollSlot = Cast<UScrollBoxSlot>(PanelSlot))
-    {
-        ScrollSlot->SetPadding(FMargin(0.f, 6.f));
-        ScrollSlot->SetHorizontalAlignment(HAlign_Fill);
-        //ScrollSlot->SetHorizontalAlignment(HAlign_Center);
-    }
-
-    ///ItemWidgets.Add(slot);
-    ItemWidgets.Add(itemid, slot);
-
-    slot->Refresh();
-
-    itemid++;
-}
 
 void UMyInventory::RemoveActorHaveActorsWithHaveBox(AActor* actor)
 {
@@ -291,95 +371,45 @@ FItemStaticData* UMyInventory::GetItemStaticData(int32 ItemID)
 
 void UMyInventory::RemoveItemWidget(int32 itemindex)
 {
-    UE_LOG(LogTemp, Warning,
-        TEXT("===== RemoveItemWidget 호출 ===== Index = %d"),
-        itemindex);
+    FInventorySlot* FoundSlot = Slots.Find(itemindex);
 
-    UMyItem** resultItem = ItemWidgets.Find(itemindex);
-    AActor** reusltActor = HaveActors.Find(itemindex);
+    if (!FoundSlot) return;
 
-    UE_LOG(LogTemp, Warning, TEXT("ItemWidgets Contains Index : %s"),
-        resultItem ? TEXT("TRUE") : TEXT("FALSE"));
+    if (FoundSlot->Widget)
+    {
+        FoundSlot->Widget->RemoveFromParent();
+    }
 
-    UE_LOG(LogTemp, Warning, TEXT("HaveActors Contains Index : %s"),
-        reusltActor ? TEXT("TRUE") : TEXT("FALSE"));
+    AActor* TargetActor = FoundSlot->Actor;
 
-
-    if (!resultItem)
-        return;
-    if (!reusltActor)
-        return;
-
-    //UMyItem* Item = ItemWidgets[itemindex];
-    //if (Item)
-    //{
-        //Item->RemoveFromParent(); // ✅ UI에서 제거
-        (*resultItem)->RemoveFromParent();
-    //}
-
-    //ItemWidgets.RemoveAt(itemindex); // ✅ 배열에서 제거
-    ItemWidgets.Remove(itemindex);
-
-    //AActor* TargetActor = HaveActor[itemindex];
-    AActor* TargetActor = *reusltActor;
     ACharacter* Player = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
 
     if (TargetActor && Player)
     {
         FVector PlayerLocation = Player->GetActorLocation();
-        FRotator PlayerRotation = Player->GetActorRotation();
-
-        // 플레이어가 바라보는 방향
         FVector Forward = Player->GetActorForwardVector();
 
-        // 원하는 거리만큼 앞쪽으로 오프셋
-        float Distance = 200.f;
-        FVector NewLocation = PlayerLocation + Forward * Distance;
+        FVector NewLocation = PlayerLocation + Forward * 200.f;
 
-        // 위치와 회전 적용
         TargetActor->SetActorLocation(NewLocation);
-        TargetActor->SetActorRotation(PlayerRotation);
+        TargetActor->SetActorRotation(Player->GetActorRotation());
     }
 
-    //HaveActor.RemoveAt(itemindex); // ✅ 배열에서 제거
-    HaveActors.Remove(itemindex);
+    Slots.Remove(itemindex);
 }
 
 void UMyInventory::RemoveItemWidgetNoItemSpawn(int32 itemindex)
 {
-    UE_LOG(LogTemp, Warning,
-        TEXT("===== RemoveItemWidgetNoItemSpawn 호출 ===== Index = %d"),
-        itemindex);
+    FInventorySlot* FoundSlot = Slots.Find(itemindex);
 
-    UMyItem** resultItem = ItemWidgets.Find(itemindex);
-    AActor** reusltActor = HaveActors.Find(itemindex);
+    if (!FoundSlot) return;
 
-    UE_LOG(LogTemp, Warning, TEXT("ItemWidgets Contains Index : %s"),
-        resultItem ? TEXT("TRUE") : TEXT("FALSE"));
+    if (FoundSlot->Widget)
+    {
+        FoundSlot->Widget->RemoveFromParent();
+    }
 
-    UE_LOG(LogTemp, Warning, TEXT("HaveActors Contains Index : %s"),
-        reusltActor ? TEXT("TRUE") : TEXT("FALSE"));
-
-    if (!resultItem)
-        return;
-    if (!reusltActor)
-        return;
-
-    //UMyItem* Item = ItemWidgets[itemindex];
-    //if (Item)
-    //{
-        //Item->RemoveFromParent(); // ✅ UI에서 제거
-    (*resultItem)->RemoveFromParent();
-    //}
-
-    //ItemWidgets.RemoveAt(itemindex); // ✅ 배열에서 제거
-    ItemWidgets.Remove(itemindex);
-
-    
-    
-
-    //HaveActor.RemoveAt(itemindex); // ✅ 배열에서 제거
-    HaveActors.Remove(itemindex);
+    Slots.Remove(itemindex);
 }
 
 int32 UMyInventory::GetItemIndexFromHaveItem(AActor* TargetActor)
@@ -550,14 +580,14 @@ void UMyInventory::AttachGunCompo(int32 itemidCard, AActor* weaponCompo)
     UE_LOG(LogTemp, Warning, TEXT("AttachGunCompo 끝"));
 }
 
-void UMyInventory::AddWeaponCompoBox(int32 itemId, AActor* actor)
+void UMyInventory::AddWeaponCompoBox(int32 itemId, AActor* actor, int32 ItemSpanwID)
 {
     //HaveWidget->ItemHave(itemId,itemid);
     UMyItem* slot = nullptr;
 
     slot = CreateWidget<UMyItem>(GetWorld(), ItemSlotClass);
     if (slot != nullptr) {
-        slot->Init(itemid, itemId, actor); // 슬롯번호, 아이템ID ??
+        slot->Init(itemid, itemId, actor, ItemSpanwID); // 슬롯번호, 아이템ID ??
         slot->SetOwnerInventory(this);
         ItemIDs.Add(itemId);//진짜 아이템 아이디
 
@@ -617,6 +647,28 @@ void UMyInventory::ActiveSecondWeaponToPlayer(AActor* actor)
         GetWorld()->SpawnActor<AWeaponActor>(StaticData->ItemActorClass, SocketTransform, SpawnParams);
         Owner->SubItemClass = StaticData->RealActiveActorClass;
     }
+}
+
+int32 UMyInventory::GetItemIndexFromActor(AActor* TargetActor)
+{
+    for (auto& Pair : Slots)
+    {
+        if (Pair.Value.Actor == TargetActor)
+        {
+            return Pair.Key;
+        }
+    }
+
+    return INDEX_NONE;
+}
+
+AActor* UMyInventory::GetActorFromSlot(int32 SlotIndex)
+{
+    FInventorySlot* FoundSlot = Slots.Find(SlotIndex);
+
+    if (!FoundSlot) return nullptr;
+
+    return FoundSlot->Actor;
 }
 
 

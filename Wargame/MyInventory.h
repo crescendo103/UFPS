@@ -68,6 +68,17 @@ public:
     UPROPERTY()
     TArray<int32> ItemIDs;
 
+
+
+    UPROPERTY()
+    TMap<int32, FInventorySlot> Slots;
+
+    UPROPERTY()
+    TMap<AActor*, UMyItem*> FloorActorWidgets;
+
+    int32 NextSlotIndex = 0;
+
+    void RemoveFloorItem(AActor* Actor);
     /*
     UPROPERTY(EditDefaultsOnly)
     TSubclassOf<class UMyItem> ItemSlotClass;
@@ -119,10 +130,10 @@ public:
     
     void SwapItems(int32 From, int32 To);
     void RefreshSlot(int32 SlotIdx);
-    void AddHaveItemBox(int32 itemId, AActor* actor);
-    void AddFloorItemBox(int32 itemId, AActor* actor);
-    void AddWeaponBox(int32 itemId, AActor* actor);
-    void AddWeaponBoxPlayer(int32 itemId, AActor* actor);
+    void AddHaveItemBox(int32 itemId, AActor* actor, int32 itemSpawnID);
+    void AddFloorItemBox(int32 itemId, AActor* actor, int32 ItemSpanwID);
+    void AddWeaponBox(int32 itemId, AActor* actor, int32 ItemSpanwID);
+    void AddWeaponBoxPlayer(int32 itemId, AActor* actor, int32 ItemSpanwID);
     void RemoveActorHaveActorsWithHaveBox(AActor* actor);
     bool IsHaveHaveActorsWithHaveBox(AActor* actor);
 
@@ -140,7 +151,10 @@ public:
 
     void WhosGunCompoToTrash(int32 itemidCard);
     void AttachGunCompo(int32 itemidCard, AActor* weaponCompo);
-    void AddWeaponCompoBox(int32 itemId, AActor* actor);
+    void AddWeaponCompoBox(int32 itemId, AActor* actor, int32 ItemSpanwID);
 
     void ActiveSecondWeaponToPlayer(AActor* actor);
+    int32 GetItemIndexFromActor(AActor* TargetActor);
+    AActor* GetActorFromSlot(int32 SlotIndex);
+
 };

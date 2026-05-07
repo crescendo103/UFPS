@@ -49,7 +49,8 @@ public class fps : ModuleRules
                 "AIModule",
                 "GameplayTasks",
                 "NavigationSystem",              
-                "Navmesh"
+                "Navmesh",
+                "MediaAssets"
             }
         );
 

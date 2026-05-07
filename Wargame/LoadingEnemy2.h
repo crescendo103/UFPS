@@ -32,4 +32,14 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Animation")
 	bool bIsWalking;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Settings")
+	FVector TargetLocation = FVector(-126763.797849, -3192.599134, 62.209195);
+	UPROPERTY(EditDefaultsOnly, Category = "Settings")
+	int32 MyOrder = 0;
+	UPROPERTY(EditDefaultsOnly, Category = "Settings")
+	float MoveSpeed = 0.50f; // Å¬¼ö·Ï »¡¶óÁü
+
+	void MoveEnemy();
+	int32 getMyOrder();
 };

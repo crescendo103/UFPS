@@ -44,7 +44,7 @@ public:
 
 
     void SetOwnerInventory(UMyInventory* InInventory);
-    USizeBox* GetScrollBox();
+    USizeBox* GetSizeBox();
     
 
     UPROPERTY(meta = (BindWidget))

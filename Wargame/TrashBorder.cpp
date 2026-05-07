@@ -62,6 +62,26 @@ bool UTrashBorder::NativeOnDrop(
 
     OwnerInventory->RemoveItemWidget(DragOp->FromSlotIndex);
 
+    ACharacter* Player = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
+    FVector PlayerLocation = Player->GetActorLocation();
+    FVector Forward = Player->GetActorForwardVector();
+    FVector NewLocation = PlayerLocation + Forward * 200.f;
+
+    FItemPacket packet;
+    //FVector ItemPos = GetActorLocation();
+    packet.Header.Type = (int32)EPacketType::Item;
+    packet.Header.Size = sizeof(FItemPacket);
+    packet.X = NewLocation.X;// ItemPos.X;
+    packet.Y = NewLocation.Y;//ItemPos.Y;
+    packet.Z = NewLocation.Z;//ItemPos.Z;
+    packet.OwnerId = -1;//임시
+    packet.ItemRow = DragOp->ItemID;
+    packet.ItemSpawnID = DragOp->ItemSpawnID;
+    packet.ShouldRemove = true;
+
+    UMyServer* MyServer = GetGameInstance()->GetSubsystem<UMyServer>();
+    MyServer->MoveItem(packet);
+
     if (DragOp->ItemActor->GetAttachParentActor())
     {
         // 지금 다른 Actor에 붙어 있음

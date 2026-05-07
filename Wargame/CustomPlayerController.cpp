@@ -8,7 +8,11 @@
 #include "AimWidget.h"
 #include "Framework/Application/SlateApplication.h"
 #include "PawnManager.h"
-
+#include "killAccountWidget.h"
+UkillAccountWidget* ACustomPlayerController::GetDeathWidget()
+{
+    return DeathLogWidget;;
+}
 void ACustomPlayerController::BeginPlay()
 {
     Super::BeginPlay();
@@ -17,6 +21,16 @@ void ACustomPlayerController::BeginPlay()
 
     if (!IsLocalController())
         return;
+    
+
+    if (ConfigData)
+    {
+        UMyServer* Server = GetGameInstance()->GetSubsystem<UMyServer>();
+        if (Server)
+        {
+            Server->Init(ConfigData);
+        }
+    }
 
     if (StartMenuWidgetClass)
     {
@@ -45,6 +59,21 @@ void ACustomPlayerController::BeginPlay()
         WatingRoomWidget->AddToViewport();
         WatingRoomWidget->SetVisibility(ESlateVisibility::Hidden);
     }
+
+    if (DeathLogWidgetClass)
+    {
+        DeathLogWidget = CreateWidget<UkillAccountWidget>(
+            this,
+            DeathLogWidgetClass
+        );
+    }
+
+    if (DeathLogWidget)
+    {
+        DeathLogWidget->AddToViewport();
+        DeathLogWidget->SetVisibility(ESlateVisibility::HitTestInvisible);
+    }
+
     // 처음에는 스타트 메뉴만 표시
     isWatingRoom = false;
 
@@ -55,6 +84,35 @@ void ACustomPlayerController::BeginPlay()
     SetInputMode(InputMode);
     bShowMouseCursor = true; // 마우스 커서 표시
     
+    
+
+    if (GlobalMapWidgetClass)
+    {
+        GlobalMapWidget = CreateWidget<UGlobalMap>(
+            this,
+            GlobalMapWidgetClass
+        );
+    }
+
+    if (GlobalMapWidget)
+    {
+        GlobalMapWidget->AddToViewport(); 
+        GlobalMapWidget->SetVisibility(ESlateVisibility::Hidden);
+    }
+
+
+    if (LoginWidgetClass)
+    {
+        LoginWidget = CreateWidget<ULoginWidget>(
+            this,
+            LoginWidgetClass
+        );
+    }
+    if (LoginWidget)
+    {
+        LoginWidget->AddToViewport();
+        LoginWidget->SetVisibility(ESlateVisibility::Visible);
+    }
 }
 
 
@@ -66,6 +124,7 @@ void ACustomPlayerController::SetTextTime(int time)
         isWatingRoom = true;
         ShowWaitingRoom();
         HiddenStartMenu();
+        ShowMiniMap();
         SpawnAndPossessMyCharacter();
     }
 
@@ -101,7 +160,8 @@ void ACustomPlayerController::SetTextTime(int time)
             SetInputMode(InputMode);
             bShowMouseCursor = true;
             /*
-            PM->SpawnHeli();*/
+            PM->SpawnHeli();//헬기 여기요
+            */
         }
         else {
             SpawnAndPossessMyCharacter();
@@ -139,7 +199,8 @@ void ACustomPlayerController::SpawnAndPossessMyCharacter()
 
     if (CurrentPawn)
     {
-        FVector NewLocation = FVector(1000, 500, 200); // 이동할 위치
+        //FVector NewLocation = FVector(1000, 500, 200); // 이동할 위치
+        FVector NewLocation = FVector(15386.461119, -42848.227375, 550.232971); // 이동할 위치
         CurrentPawn->SetActorLocation(NewLocation);
 
         UE_LOG(LogTemp, Warning, TEXT("Pawn moved to: %s"), *NewLocation.ToString());
@@ -173,6 +234,30 @@ void ACustomPlayerController::SpawnAndPossessMyCharacter()
     
 }
 
+void ACustomPlayerController::InitMinimap(UTextureRenderTarget2D* RT)
+{
+    if (MinimapWidgetClass)
+    {
+        MiniMapWidget = CreateWidget<UMinimap>(this, MinimapWidgetClass);
+        if (MiniMapWidget)
+        {
+            MiniMapWidget->AddToViewport();
+            MiniMapWidget->SetRenderTarget(RT); // ✅ 확실히 값 있음
+            HiddendMiniMap();
+        }
+    }
+}
+
+void ACustomPlayerController::UpdateGlobalMap(bool state)
+{
+    if (state) {
+        GlobalMapWidget->SetVisibility(ESlateVisibility::Visible);
+    }
+    else {
+        GlobalMapWidget->SetVisibility(ESlateVisibility::Hidden);
+    }    
+}
+
 void ACustomPlayerController::ShowWaitingRoom()
 {
     WatingRoomWidget->SetVisibility(ESlateVisibility::Visible);
@@ -191,4 +276,13 @@ void ACustomPlayerController::ShowHiddenStartMenu()
 void ACustomPlayerController::HiddenStartMenu()
 {
     StartingMenuWidget->SetVisibility(ESlateVisibility::Hidden);
+}
+void ACustomPlayerController::ShowMiniMap()
+{
+    MiniMapWidget->SetVisibility(ESlateVisibility::Visible);
+}
+
+void ACustomPlayerController::HiddendMiniMap()
+{
+    MiniMapWidget->SetVisibility(ESlateVisibility::Hidden);
 }

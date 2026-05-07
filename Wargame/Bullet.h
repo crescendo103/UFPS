@@ -67,12 +67,13 @@ public:
 
 	// 1회 재생용
 	bool bPlayed = false;
-	bool firstOverlap;
+	
 
 	int32 BulletOwner;
 	FTimerHandle OverlapTimerHandle;
 
 	void SetBulletOwner(int32 owner);
+	int32 GetBulletOwner();
 	void ActiveBulletOverlap();
 
 protected:

@@ -35,48 +35,18 @@ void AMyEnemy::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 }
 
-void AMyEnemy::SetSPD(float speed, FVector position, FVector direction, bool isjump, bool isfire, bool isdeath)
+void AMyEnemy::SetSPD(FEnemyState EnemyData)
 {
-	CurrentSpeed = speed;
-	Position = position;
-	Direction = direction;
-	IsJump = isjump;
-	IsFire = isfire;	
-	IsDeath = isdeath;
+	CurrentSpeed = EnemyData.Speed;
+	Position = EnemyData.Position;
+	Direction = EnemyData.Direction;
+	IsJump = EnemyData.isjump;
+	IsFire = EnemyData.isfire;
+	IsDeath = EnemyData.isdeath;
+	IsHeal = EnemyData.isHeal;
+	IsHaveGun = EnemyData.isHaveGun;
 }
-/*
-float AMyEnemy::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
-{
-	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-	UE_LOG(LogTemp, Warning,
-		TEXT("hit Enemy bullet"));
-
-	FDamagePacket packet;
-	packet.Header.Type = (int32)EPacketType::Damage;
-	packet.Header.Size = sizeof(FDamagePacket);
-	packet.CharacterId = -1;
-	packet.Damage = DamageAmount;
-
-	if (Cast<AFragGrenade>(DamageCauser))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("FragGrenade Damage"));
-		packet.Effect= EPlayerEffect::Red;
-	}
-	else if(Cast<AFlashBang>(DamageCauser)) {
-		UE_LOG(LogTemp, Warning, TEXT("FlashBangGrenade Damage"));
-		packet.Effect = EPlayerEffect::White;
-	}
-	else {
-		packet.Effect = EPlayerEffect::Blue;
-	}
-
-	MyServer->MoveDmg(packet);	
-
-	
-	return DamageAmount;
-}
-*/
 void AMyEnemy::SetIgnoreCharacterId(int id)
 {
 	IgnoreCharacterID = id;

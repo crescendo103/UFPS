@@ -40,25 +40,9 @@ public:
     UPROPERTY(VisibleAnywhere)
     AMyCharacter* Player;
 
-    /*
-    UFUNCTION()
-    void OnOverlapBegin(
-        UPrimitiveComponent* OverlappedComp,
-        AActor* OtherActor,
-        UPrimitiveComponent* OtherComp,
-        int32 OtherBodyIndex,
-        bool bFromSweep,
-        const FHitResult& SweepResult
-    );
-
-    UFUNCTION()
-    void OnOverlapEnd(
-        UPrimitiveComponent* OverlappedComp,
-        AActor* OtherActor,
-        UPrimitiveComponent* OtherComp,
-        int32 OtherBodyIndex
-    );
-    */
+    
+  
+    
 
     // 1초 타이머
     FTimerHandle CheckTimerHandle;
@@ -67,4 +51,8 @@ public:
 
     float MeshBaseRadius;
     bool isDone;
+
+    float TargetRadius;
+    FTimerHandle timerHandle;
+    void SetTargetRadius();
 };

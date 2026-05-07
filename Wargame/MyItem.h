@@ -23,7 +23,8 @@ class FPS_API UMyItem : public UUserWidget
 	GENERATED_BODY()
 	
 public:
-	void Init(int32 InSlotIndex, int32 InItemID,AActor* actor);
+
+	void Init(int32 InSlotIndex, int32 InItemID,AActor* actor, int32 itemSpawnID);
     void Init(int32 InSlotIndex, int32 InItemID);
     virtual void NativeConstruct() override;
 
@@ -52,10 +53,10 @@ public:
     UPROPERTY(meta = (BindWidget))
     UImage* ItemImage;
 
-
-
+    
     int32 SlotIndex;
     int32 ItemID;
     AActor* Actor;
+    int32 ItemSpanwID=0;
     
 };

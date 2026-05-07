@@ -6,11 +6,12 @@
 #include "MyDragDropOperation.h"
 #include "MyInventory.h"
 
-void UMyItem::Init(int32 InSlotIndex, int32 InItemID, AActor* actor)
+void UMyItem::Init(int32 InSlotIndex, int32 InItemID, AActor* actor, int32 itemSpawnID)
 {
 	SlotIndex = InSlotIndex;
 	ItemID = InItemID;
     Actor = actor;
+    ItemSpanwID = itemSpawnID;
 }
 
 void UMyItem::Init(int32 InSlotIndex, int32 InItemID)
@@ -21,9 +22,7 @@ void UMyItem::Init(int32 InSlotIndex, int32 InItemID)
 
 void UMyItem::NativeConstruct()
 {
-    Super::NativeConstruct();
-
-    
+    Super::NativeConstruct();    
 }
 
 
@@ -47,11 +46,12 @@ void UMyItem::NativeOnDragDetected(
     DragOp->ItemID = ItemID;
     DragOp->FromSlotIndex = SlotIndex;
     DragOp->ItemActor = Actor;
+    DragOp->ItemSpawnID = ItemSpanwID;
     // ✅ 드래그 시 보여줄 위젯 생성
     UMyItem* DragVisual =
         CreateWidget<UMyItem>(GetWorld(), GetClass());
 
-    DragVisual->Init(SlotIndex, ItemID, Actor);    
+    DragVisual->Init(SlotIndex, ItemID, Actor, ItemSpanwID);
     DragVisual->SetOwnerInventory(OwnerInventory);//
     
     DragVisual->Refresh();//
@@ -122,6 +122,9 @@ void UMyItem::SetItemIcon(UTexture2D* Icon)
 
 void UMyItem::Refresh()
 {
+    
+    UE_LOG(LogTemp, Warning, TEXT("ItemID = %d"), ItemID);
+
     if (!ItemImage || ItemID < 0 || !OwnerInventory)
     {
         ItemImage->SetVisibility(ESlateVisibility::Hidden);
@@ -132,8 +135,14 @@ void UMyItem::Refresh()
         OwnerInventory->GetItemStaticData(ItemID);
 
     if (!StaticData)
+    {
+        UE_LOG(LogTemp, Error, TEXT("StaticData NOT FOUND for ItemID %d"), ItemID);
         return;
+    }
+    UE_LOG(LogTemp, Warning, TEXT("Icon = %s"),
+        StaticData->Icon ? *StaticData->Icon->GetName() : TEXT("ICON NULL"));
 
     ItemImage->SetVisibility(ESlateVisibility::Visible);
     ItemImage->SetBrushFromTexture(StaticData->Icon);
+    
 }

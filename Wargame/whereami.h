@@ -11,4 +11,7 @@ class FPS_API AWhereami : public AActor
 
 public:
     AWhereami();
+protected:
+    // Called when the game starts or when spawned
+    virtual void BeginPlay() override;
 };
