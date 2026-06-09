@@ -27,5 +27,5 @@ public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void UseWeapon(AMyCharacter* Owner, FVector StartPos, FVector Dir);
-		
+	virtual void SendBulletPacket(FVector startPos, FVector dir);
 };

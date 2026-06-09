@@ -6,6 +6,7 @@
 #include <Kismet/GameplayStatics.h>
 #include "GameFramework/Character.h"
 #include "MyCharacter.h"
+#include "Camera/CameraComponent.h"
 
 // Sets default values for this component's properties
 UGrenadeThrowCalculateCompo::UGrenadeThrowCalculateCompo()
@@ -74,21 +75,36 @@ void UGrenadeThrowCalculateCompo::TickComponent(float DeltaTime, ELevelTick Tick
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	
-	UpdateSplinePath();
-	
-	//UpdateSplinePath();
-	// ...
+	UpdateSplinePath();		
 }
 
 void UGrenadeThrowCalculateCompo::UpdateSplinePath()
-{
-	/*
-	UE_LOG(LogTemp, Warning, TEXT("업데이트스플라인패스"));
-	UE_LOG(LogTemp, Warning, TEXT("bShow = %d | Spline_Meshs.Num = %d"),
-		bShow,
-		Spline_Meshs.Num()
-	);
-	*/
+{	
+	if (!bShow)
+	{
+		Spline_Path->ClearSplinePoints(true);
+		if (Spline_Meshs.Num() > 0)
+		{
+			for (int32 i = 0; i < Spline_Meshs.Num(); i++)
+			{
+				if (Spline_Meshs[i])
+				{
+					// 눈에서 즉시 가려버리고 컴포넌트 파괴
+					Spline_Meshs[i]->SetVisibility(false);
+					Spline_Meshs[i]->DestroyComponent();
+				}
+			}
+			Spline_Meshs.Empty();
+		}
+
+		if (CircleDecal)
+		{
+			CircleDecal->SetVisibility(false);
+		}
+
+		return; // 청소가 끝났으니 여기서 함수를 안전하게 끝냅니다!
+	}
+
 	//전에 저장되있는데 스프라인 포인트를 다 지움//
 	Spline_Path->ClearSplinePoints(true);
 	if (Spline_Meshs.Num() > 0)
@@ -129,38 +145,14 @@ void UGrenadeThrowCalculateCompo::UpdateSplinePath()
 	if (!Mesh) return;
 
 	FVector HandLocation = Mesh->GetSocketLocation("RightHandPinky4Socket");
-
-	APawn* Pawn = Cast<APawn>(GetOwner());
-	if (!Pawn || !Pawn->IsLocallyControlled())
-		return;
-
-	AController* Controller = Pawn->GetController();
-	PC = Cast<APlayerController>(Controller);
-
-	if (!PC)
-		return;
-
-	//FVector Direction = Character->GetActorForwardVector();//PC->GetControlRotation().Vector().GetSafeNormal();
-	/*
-	FRotator ThrowRot = GetActorRotation();
-
-            // 2. 위 / 아래 각도 추가 (Pitch)
-            ThrowRot.Pitch += VisualGrenade->AccumulateWheelVal;
-
-            // 3. 회전 → 방향 벡터
-            FVector Direction = ThrowRot.Vector().GetSafeNormal();
-	*/
-	// 1. 액터의 회전값 가져오기
-	FRotator ThrowRot = Character->GetActorRotation();
-	//if (MyCharacter->GetVisualGrenadePointer()->GetDirty()) {
-		ThrowRot.Pitch += MyCharacter->GetVisualGrenadePointer()->AccumulateWheelVal;
-		// 2. 위 / 아래 각도 추가 (Pitch)
-		
-		//MyCharacter->GetVisualGrenadePointer()->SetDirty(false);
-	//}
-	// 3. 회전 → 방향 벡터
-	FVector Direction = ThrowRot.Vector().GetSafeNormal();
-	FVector LaunchVelocity = Direction * 1000.f;
+	
+	// [수정] 카메라 앞방향 벡터를 가져온 뒤, 마우스 휠 회전값(MouseVal)을 추가합니다.
+	FRotator CameraRot = MyCharacter->FollowCamera->GetComponentRotation();
+	CameraRot.Pitch += MouseVal; // 마우스 휠로 쌓인 위/아래 각도 추가
+	CameraRot.Pitch = FMath::Clamp(CameraRot.Pitch, -60.f, 60.f); // 각도 제한 (안전장치)
+	
+	FVector Direction = CameraRot.Vector().GetSafeNormal(); // 최종 조준 방향
+	FVector LaunchVelocity = Direction * 1000.f; // 던지는 힘 (1000)
 
 	//라인 트레이스를 쏴 그 길의 각 포인트지점을 따라 Spline에 저장해줌//
 	bool isHit = UGameplayStatics::Blueprint_PredictProjectilePath_ByTraceChannel(GetWorld(), OutHIt, OutPathPositions, LastPosition, HandLocation, LaunchVelocity, true, 10.f, ECollisionChannel::ECC_WorldStatic, false, IgnoreActors, EDrawDebugTrace::None, 15.f);
@@ -258,6 +250,22 @@ void UGrenadeThrowCalculateCompo::SetbShow(bool state)
 void UGrenadeThrowCalculateCompo::SetMouseVal(float val)
 {
 	MouseVal += val;
+}
+
+FVector UGrenadeThrowCalculateCompo::GetFinalThrowDirection() const
+{
+	ACharacter* Character = Cast<ACharacter>(GetOwner());
+	if (!Character) return FVector::ForwardVector;
+
+	AMyCharacter* MyCharacter = Cast<AMyCharacter>(Character);
+	if (!MyCharacter || !MyCharacter->FollowCamera) return FVector::ForwardVector;
+
+	// 예측선 틱에서 계산하는 방식과 완전히 동일하게 처리
+	FRotator CameraRot = MyCharacter->FollowCamera->GetComponentRotation();
+	CameraRot.Pitch += MouseVal;
+	CameraRot.Pitch = FMath::Clamp(CameraRot.Pitch, -60.f, 60.f);
+
+	return CameraRot.Vector().GetSafeNormal();
 }
 
 

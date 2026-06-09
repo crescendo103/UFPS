@@ -19,7 +19,10 @@ class FPS_API URifleUseComponent : public UWeaponUseComponent
 	
 public:
 	void UseWeapon(AMyCharacter* Owner, FVector StartPos, FVector Dir);
+	void SendBulletPacket(FVector startPos, FVector dir);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	TSubclassOf<ABullet> BulletClass;
+
+
 };

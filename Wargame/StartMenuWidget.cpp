@@ -37,6 +37,7 @@ void UStartMenuWidget::SendTimePacket(int32 TimeValue)
 	if (MyServer)
 	{
 		MyServer->MoveTime(TimeValue);
+		//MyServer->SetMyCharacterId();//게임 접속할때 안전하게 서버에서 받은 캐릭터 id를 캐릭터클래스에 연결
 	}
 
 	

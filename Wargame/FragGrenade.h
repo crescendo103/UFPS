@@ -14,9 +14,9 @@ class FPS_API AFragGrenade : public AMyGrenade
 {
 	GENERATED_BODY()
 public:
-	UPROPERTY(EditDefaultsOnly, Category = "EffectNiagara")
-	UNiagaraSystem* GrenadeImpactEffect;
+	//UPROPERTY(EditDefaultsOnly, Category = "EffectNiagara")
+	//UNiagaraSystem* GrenadeImpactEffect;
 
-	void ExplodeVoxel(FVector ExplosionCenter, float ExplosionRadius) override;
-	void Explode() override;
+	//void ExplodeVoxel(FVector ExplosionCenter, float ExplosionRadius) override;
+	//void Explode() override;
 };

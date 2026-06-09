@@ -122,8 +122,19 @@ void AAIEnemy::Tick(float DeltaTime)
         man.IsFire = fireing;
         man.IsDeath = false;
         man.IsHeal = false;
+        man.WeaponType = EWeaponType::Melee;
+        man.AimActive = false;
 
-        
+        UE_LOG(LogTemp, Warning,
+            TEXT("ID:%d Pos(%.1f %.1f %.1f) Dir(%.1f %.1f %.1f) Speed:%.1f Jump:%d Fire:%d"),
+            man.CharacterId,
+            man.X, man.Y, man.Z,
+            man.DirX, man.DirY, man.DirZ,
+            man.Speed,
+            man.IsJump,
+            man.IsFire
+        );
+
         if (MyServer) {
             MyServer->MoveAI(man);
         }
@@ -500,8 +511,9 @@ void AAIEnemy::RequestNewPos(float x, float y, float z, bool Jump, bool Fire)
     man.IsFire = Fire;
     man.IsDeath = false;
     man.IsHeal = false;
+    man.WeaponType = EWeaponType::Melee;
+    man.AimActive = false;
 
-    
     if (MyServer) {
         MyServer->MoveAI(man);
     }

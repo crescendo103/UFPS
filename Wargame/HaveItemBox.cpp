@@ -6,6 +6,8 @@
 #include "MyItem.h"
 #include <Components/ScrollBoxSlot.h>
 #include "MyInventory.h"
+#include "MyCharacter.h"
+#include "WeaponActor.h"
 
 void UHaveItemBox::SetOwnerInventory(UMyInventory* InInventory)
 {
@@ -70,17 +72,12 @@ bool UHaveItemBox::NativeOnDrop(
         nullptr,
         ETeleportType::TeleportPhysics
     );
-
+    AWeaponActor* weaponActor = Cast<AWeaponActor>(DragOp->ItemActor);
+    weaponActor->sendItemPacket();
     // ⭐⭐⭐ 핵심 ⭐⭐⭐
-    // 2️⃣ FloorItemBox 쪽 아이템 제거
-    UE_LOG(LogTemp, Warning,
-        TEXT("[Drop] FromSlotIndex=%d, ItemID=%d, Actor=%s"),
-        DragOp->FromSlotIndex,
-        DragOp->ItemID,
-        DragOp->ItemActor ? *DragOp->ItemActor->GetName() : TEXT("NULL")
-    );
+    // 2️⃣ FloorItemBox 쪽 아이템 제거    
+    OwnerInventory->Owner->setCurrentWeapon(EWeaponType::Rifle);        
 
-    
     //OwnerInventory->RemoveItemWidget(DragOp->FromSlotIndex);    
     OwnerInventory->RemoveItemWidgetNoItemSpawn(DragOp->FromSlotIndex);
     OwnerInventory->RemoveFloorItem(DragOp->ItemActor);//있다면

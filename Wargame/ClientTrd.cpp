@@ -23,7 +23,7 @@ ClientTrd::ClientTrd(void* InSocket, UMyServer* InServer)
 	DeathQueue = new TQueue<FDeathPacket, EQueueMode::Mpsc>();
 	MeleeQueue = new TQueue<FServerBullet, EQueueMode::Mpsc>();
 	ItemSpawnQueue = new TQueue<FItemPacket, EQueueMode::Mpsc>();
-
+	VehicleQueue = new TQueue<FVehiclePacket, EQueueMode::Mpsc>();
 	Thread = FRunnableThread::Create(this, TEXT("Network Thread"));
 	//RecvQueue = new TQueue<FServerBulletPos, EQueueMode::Mpsc>();
 	
@@ -122,7 +122,7 @@ uint32 ClientTrd::Run()
 			case EPacketType::Bullet:
 			{
 				FServerBullet* Bullet = reinterpret_cast<FServerBullet*>(PacketPtr);
-				BulletQueue->Enqueue(*Bullet);
+				//BulletQueue->Enqueue(*Bullet);
 
 				AsyncTask(ENamedThreads::GameThread, [this, Bullet]()
 					{
@@ -139,6 +139,12 @@ uint32 ClientTrd::Run()
 				successConnect = true;
 				break;
 			}
+			case EPacketType::Vehicle:
+			{
+				FVehiclePacket* vehicle = reinterpret_cast<FVehiclePacket*>(PacketPtr);
+				VehicleQueue->Enqueue(*vehicle);				
+				break;
+			}
 
 			case EPacketType::InformationText:
 			{
@@ -147,10 +153,30 @@ uint32 ClientTrd::Run()
 
 				int32 ReceivedTime = TimePacket->time;
 
+				UE_LOG(LogTemp, Warning,
+					TEXT("[CLIENT RECV] InformationText | Type=%d | Time=%d"),
+					TimePacket->Header.Type,
+					ReceivedTime);
+
 				AsyncTask(ENamedThreads::GameThread, [this, ReceivedTime]()
 					{
 						if (Server)
 							Server->StartCountdownByPacket(ReceivedTime);
+					});
+				break;
+			}
+			case EPacketType::BoradCast:
+			{
+				FBrodcastMessage* TextPacket =
+					reinterpret_cast<FBrodcastMessage*>(PacketPtr);
+
+				FString Message = FString(UTF8_TO_TCHAR(TextPacket->Information));
+
+
+				AsyncTask(ENamedThreads::GameThread, [this, Message]()
+					{
+						if (Server)
+							Server->SetInformationText(Message);
 					});
 				break;
 			}

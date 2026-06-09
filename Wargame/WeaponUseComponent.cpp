@@ -38,3 +38,8 @@ void UWeaponUseComponent::UseWeapon(AMyCharacter* Owner, FVector StartPos, FVect
 		TEXT("UseWeapon parent"));
 }
 
+void UWeaponUseComponent::SendBulletPacket(FVector startPos, FVector dir)
+{
+	UE_LOG(LogTemp, Warning,
+		TEXT("UseWeapon parent"));
+}

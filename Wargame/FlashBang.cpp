@@ -3,7 +3,7 @@
 
 #include "FlashBang.h"
 
-
+/*
 void AFlashBang::Explode()
 {
 	if (GrenadeImpactEffect)
@@ -49,4 +49,4 @@ void AFlashBang::ExplodeVoxel(FVector ExplosionCenter, float ExplosionRadius)
 	);
 
 	Destroy();
-}
+}*/

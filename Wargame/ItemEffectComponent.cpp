@@ -1,47 +1,145 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "ItemEffectComponent.h"
-#include "NiagaraFunctionLibrary.h"
 
-// Sets default values for this component's properties
+#include "NiagaraFunctionLibrary.h"
+#include "Kismet/GameplayStatics.h"
+
+#include "Components/AudioComponent.h"
+#include "Components/SphereComponent.h"
+
 UItemEffectComponent::UItemEffectComponent()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = false;
 
-	// ...
+	OverlapSphere =
+		CreateDefaultSubobject<USphereComponent>(
+			TEXT("OverlapSphere"));
+
+	OverlapSphere->SetupAttachment(this);
+
+	OverlapSphere->SetCollisionEnabled(
+		ECollisionEnabled::QueryOnly);	
 }
 
-
-// Called when the game starts
 void UItemEffectComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// ...
+	AActor* Owner = GetOwner();
+
+	if (!Owner)
+		return;	
+
 	
 }
 
-
-// Called every frame
-void UItemEffectComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+void UItemEffectComponent::EndPlay(
+	const EEndPlayReason::Type EndPlayReason)
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	PlayDestroyEffect();
+	PlayDestroySound();
 
-	// ...
+	Super::EndPlay(EndPlayReason);
 }
 
-void UItemEffectComponent::PlayEffect()
+void UItemEffectComponent::OnOverlapBegin(
+	UPrimitiveComponent* OverlappedComponent,
+	AActor* OtherActor,
+	UPrimitiveComponent* OtherComp,
+	int32 OtherBodyIndex,
+	bool bFromSweep,
+	const FHitResult& SweepResult)
 {
-	if (!UseEffect) return;
+	if (!OtherActor || OtherActor == GetOwner())
+		return;
+
+	if (OverlapSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(
+			GetWorld(),
+			OverlapSound,
+			GetComponentLocation());
+	}
+
+	if (OverlapEffect)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			GetWorld(),
+			OverlapEffect,
+			GetComponentLocation(),
+			GetComponentRotation());
+	}
+}
+
+void UItemEffectComponent::PlayStartEffect()
+{
+	if (!StartEffect)
+		return;
 
 	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
 		GetWorld(),
-		UseEffect,
+		StartEffect,
 		GetComponentLocation(),
-		GetComponentRotation()
-	);
+		GetComponentRotation());
 }
 
+void UItemEffectComponent::PlayDestroyEffect()
+{
+	if (!DestroyEffect)
+		return;
+
+	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+		GetWorld(),
+		DestroyEffect,
+		GetComponentLocation(),
+		GetComponentRotation());
+}
+
+void UItemEffectComponent::PlayStartSound()
+{
+	if (!StartSound)
+		return;
+
+	UGameplayStatics::PlaySoundAtLocation(
+		GetWorld(),
+		StartSound,
+		GetComponentLocation());
+}
+
+void UItemEffectComponent::PlayDestroySound()
+{
+	if (!DestroySound)
+		return;
+
+	UGameplayStatics::PlaySoundAtLocation(
+		GetWorld(),
+		DestroySound,
+		GetComponentLocation());
+}
+
+void UItemEffectComponent::StartLoopSound()
+{
+	if (!LoopSound)
+		return;
+
+	if (LoopAudioComponent)
+		return;
+
+	LoopAudioComponent =
+		UGameplayStatics::SpawnSoundAttached(
+			LoopSound,
+			this);
+
+	if (LoopAudioComponent)
+	{
+		LoopAudioComponent->Play();
+	}
+}
+
+void UItemEffectComponent::StopLoopSound()
+{
+	if (!LoopAudioComponent)
+		return;
+
+	LoopAudioComponent->Stop();
+	LoopAudioComponent = nullptr;
+}

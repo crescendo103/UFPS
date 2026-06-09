@@ -47,12 +47,13 @@ void UMyInventory::NativeConstruct()
     WeaponBoxPlayerWidget->SetVisibility(ESlateVisibility::Hidden);
 
     
-
+    /*606
     GunCompoWidget = CreateWidget<UInventoryGunCompoBox>(GetWorld(), GunCompoWidgetClass);
     GunCompoWidget->SetOwnerInventory(this);
     //GunCompoWidget->SetOwner(Owner);
+    
     GunCompoWidget->AddToViewport(); // ZOrder 높게
-    GunCompoWidget->SetVisibility(ESlateVisibility::Hidden);
+    GunCompoWidget->SetVisibility(ESlateVisibility::Hidden);*/
 }
 
 void UMyInventory::RemoveFloorItem(AActor* Actor)
@@ -450,8 +451,8 @@ void UMyInventory::OnOffPZarts()
         HaveWidget->SetVisibility(ESlateVisibility::Hidden);
         WeaponBoxWidget->SetVisibility(ESlateVisibility::Hidden);
         WeaponBoxPlayerWidget->SetVisibility(ESlateVisibility::Hidden);
-        GunCompoWidget->SetVisibility(ESlateVisibility::Hidden);
-        //WeaponBoxWidget->SetVisibility(ESlateVisibility::Visible);
+        //GunCompoWidget->SetVisibility(ESlateVisibility::Hidden);
+        
     }
     else {
         TrashWidget->SetVisibility(ESlateVisibility::Visible);
@@ -459,8 +460,8 @@ void UMyInventory::OnOffPZarts()
         HaveWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
         WeaponBoxWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
         WeaponBoxPlayerWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
-        GunCompoWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
-        //WeaponBoxWidget->SetVisibility(ESlateVisibility::Visible);
+        //GunCompoWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+        
     }
     partsOn = !partsOn;
 
@@ -579,7 +580,7 @@ void UMyInventory::AttachGunCompo(int32 itemidCard, AActor* weaponCompo)
 
     UE_LOG(LogTemp, Warning, TEXT("AttachGunCompo 끝"));
 }
-
+/*
 void UMyInventory::AddWeaponCompoBox(int32 itemId, AActor* actor, int32 ItemSpanwID)
 {
     //HaveWidget->ItemHave(itemId,itemid);
@@ -614,7 +615,7 @@ void UMyInventory::AddWeaponCompoBox(int32 itemId, AActor* actor, int32 ItemSpan
     slot->Refresh();
 
     itemid++;
-}
+}606*/
 
 void UMyInventory::ActiveSecondWeaponToPlayer(AActor* actor)
 {
@@ -637,7 +638,7 @@ void UMyInventory::ActiveSecondWeaponToPlayer(AActor* actor)
                     RTS_World
                 );
         }
-
+        /* 5-22 왜 스폰하고 있었지..? 부착하기만하면 되는데
         FActorSpawnParameters SpawnParams;
         SpawnParams.Owner = Owner;
         //SpawnParams.Instigator = Owner->GetInstigator();
@@ -645,7 +646,10 @@ void UMyInventory::ActiveSecondWeaponToPlayer(AActor* actor)
             ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
         GetWorld()->SpawnActor<AWeaponActor>(StaticData->ItemActorClass, SocketTransform, SpawnParams);
-        Owner->SubItemClass = StaticData->RealActiveActorClass;
+        */
+        //Owner->SubItemClass = StaticData->RealActiveActorClass;5-23
+        FSubItemData subData = { StaticData->RealActiveActorClass, StaticData->ItemID };
+        Owner->SetSubItemData(subData);
     }
 }
 

@@ -38,7 +38,17 @@ void UItemManagerSubsystem::SetItem(int32 SpawnId, AWeaponActor* Item)
 
 void UItemManagerSubsystem::InitItems(UWorld* World)
 {
-    ItemMap.Empty();
+    if (!ItemMap.IsEmpty())
+    {
+        return;
+    }
+
+    if (!IsValid(World))
+    {
+        return;
+    }
+
+    //ItemMap.Empty();
 
     TArray<AActor*> FoundActors;
     UGameplayStatics::GetAllActorsOfClass(World, AWeaponActor::StaticClass(), FoundActors);

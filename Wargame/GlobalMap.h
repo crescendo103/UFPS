@@ -1,44 +1,57 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// GlobalMap.h
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Components/Image.h"
-
 #include "GlobalMap.generated.h"
 
-/**
- * 
- */
+class UImage;
+class UTextureRenderTarget2D;
+class UMaterialInterface;
+class UMaterialInstanceDynamic;
+
 UCLASS()
 class FPS_API UGlobalMap : public UUserWidget
 {
 	GENERATED_BODY()
 
 public:
-	void CalPlayerPos();
-	void UpdatePlayerDotPosition(float UI_X, float UI_Y);
+
+	virtual void NativeConstruct() override;
+	virtual void NativeTick(
+		const FGeometry& MyGeometry,
+		float InDeltaTime) override;
+
+	void SetRenderTarget(
+		UTextureRenderTarget2D* RT);
+
+public:
 
 	UPROPERTY(meta = (BindWidget))
 	UImage* MapImage;
 
-	UPROPERTY(meta = (BindWidget))
-	UImage* PlayerDot;
+	UPROPERTY(EditAnywhere,
+		BlueprintReadWrite,
+		Category = "Minimap")
+	UMaterialInterface* MinimapMaterial;
 
-	
+	UPROPERTY()
+	UTextureRenderTarget2D* CurrentRT;
 
+private:
 
-protected:
-	virtual void NativeConstruct() override;
-	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+	UPROPERTY()
+	UMaterialInstanceDynamic* MID;
+
+public:
 
 	FVector MapCenter;
-	float OrthoWidth;
-	float MapSizeX;
-	float MapSizeY;
+
+	float OrthoWidth = 0.f;
+
+	float MapSizeX = 0.f;
+	float MapSizeY = 0.f;
 
 	FVector PlayerLoc;
-
-
 };

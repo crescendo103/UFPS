@@ -36,6 +36,7 @@ public:
 	TQueue<FDeathPacket, EQueueMode::Mpsc>* DeathQueue;
 	TQueue<FServerBullet, EQueueMode::Mpsc>* MeleeQueue;
 	TQueue<FItemPacket, EQueueMode::Mpsc>* ItemSpawnQueue;
+	TQueue<FVehiclePacket, EQueueMode::Mpsc>* VehicleQueue;
 
 	UMyServer* Server;
 

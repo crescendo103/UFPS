@@ -15,6 +15,7 @@
 
 #include "Bomb.generated.h"
 
+class UItemEffectComponent;
 UCLASS()
 class FPS_API ABomb : public AActor
 {
@@ -46,12 +47,14 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
 	UProjectileMovementComponent* PojectileCompo;
 	UPROPERTY(VisibleDefaultsOnly, Category = "Bomb")
+	class UStaticMeshComponent* BombMesh;
+	UPROPERTY(VisibleDefaultsOnly, Category = "Bomb")
 	USphereComponent* CollisionComponent;
 	UPROPERTY(EditDefaultsOnly, Category = "EffectNiagara")
 	UNiagaraSystem* BulletImpactEffect;
-	// 오디오 컴포넌트
+	//컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	class USoundComponent* BulletAudio;
+	UItemEffectComponent* ItemEffectComponent;
 
 	bool bPlayed = false;
 };

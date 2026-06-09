@@ -2,7 +2,7 @@
 
 
 #include "FragGrenade.h"
-
+/*
 void AFragGrenade::Explode()
 {
 	if (GrenadeImpactEffect)
@@ -33,4 +33,4 @@ void AFragGrenade::ExplodeVoxel(FVector ExplosionCenter, float ExplosionRadius)
 	);
 
 	Destroy();
-}
+}*/

@@ -26,6 +26,7 @@ class UStartMenuWidget;
 class ABomb;
 class ABlueHole;
 class UGameConfigData;
+class APawnVehicle;
 UCLASS()
 class FPS_API UMyServer : public UGameInstanceSubsystem, public FTickableGameObject
 {
@@ -35,7 +36,7 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 	void Init(UGameConfigData* Config);
-
+	
 	virtual void Tick(float DeltaTime) override;
 	virtual TStatId GetStatId() const override;
 	
@@ -46,9 +47,12 @@ public:
 	void MoveTime(int32 time);
 	void MoveDeath(FDeathPacket packet);
 	void MoveItem(FItemPacket packet);
+	void MoveBroadCast(FBrodcastMessage packet);
+	void MoveVehicle(FVehiclePacket packet);
+
 	void Shotoccurred(FServerBullet bullet);
 	void SetThreadSocketHandle();//쓰레드 생성
-	void SpawnActor();
+	void ProcessPacket();
 	void SetBulletClass(TSubclassOf<ABullet> blueprint);
 	void SetEnermyClass(TSubclassOf<AMyEnemy> blueprint);
 	void SetAiClass(TSubclassOf<AAIEnemy> blueprint);
@@ -58,14 +62,15 @@ public:
 	
 	void SetRocalPlayer(AActor* actor);
 
-	void ProcessBulletPacket();
-	void PorcessCharacterPacket();
-
+	
+	
 	void SetBulletPacket(FServerBullet resentPacket);
 	void SetCharacterPacket(FCharacterPacket resentPacket);
 
 	void CreateGrenade(FGrenadePacket packet);
 	void SetGrenadeClass(TSubclassOf<AMyGrenade> blueprint);
+	TSubclassOf<AMyGrenade> GetGrenadeClass();
+
 	void SpawnGrenade();
 	void SpawnBullet(FServerBullet bullet);
 	void SpawnMelee();
@@ -73,7 +78,7 @@ public:
 	int32 CountdownTime = 300;
 
 	void StartCountdownByPacket(int countdownamount); // 패킷 true 들어왔을 때 호출
-	
+	void SetInformationText(FString message);
 
 
 	void MoveStartEnemyPawn(int order);
@@ -84,7 +89,7 @@ public:
 	UPROPERTY()
 	APawn* StartMenuPawn;
 
-
+	UGameConfigData* Items;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	TSubclassOf<ABullet> BulletClass;
@@ -100,12 +105,15 @@ public:
 	TMap<int32, ABullet*> SpawnItems;
 	UPROPERTY(BlueprintReadOnly)
 	TMap<int32, AMyEnemy*> SpawnEnemys;
-	UPROPERTY()
-	TMap<int32, AMyGrenade*> SpawnGrenades;
+
+	UPROPERTY(BlueprintReadOnly)
+	TMap<int32, APawnVehicle*> SpawnVehicles;
+
+	//UPROPERTY()5-23
+	//TMap<int32, AMyGrenade*> SpawnGrenades;
 	UPROPERTY(BlueprintReadOnly)
 	TMap<int32, AAIEnemy*> SpawnAis;
-	UFUNCTION()
-	void OnBulletHit(int32 BulletId, int32 CharacterId);
+	
 	UPROPERTY()
 	TMap<int32, bool> Usedbullet;
 	UPROPERTY()
@@ -134,6 +142,7 @@ public:
 	ClientTrd* ClientThread;
 	FTimerHandle ServerTimer;
 	int32 MyOwner;
+	void SetMyCharacterId();
 	bool IsSetMyOwner;
 	//bool IsSpawned;
 public:
@@ -154,10 +163,14 @@ public:
 	FTimerHandle timerHandle;
 	
 	FVector RedzoneCenter;
-	float RedzoneRadius = 3000.0f;   // 반지름 (원하는 값으로 변경)
+	float RedzoneRadius = 10000.0f;   // 반지름 (원하는 값으로 변경)
 	int32 SpawnCount = 0;
-	int32 MaxSpawnCount = 10;   // 10번 생성하면 끝
-	
+	int32 MaxSpawnCount = 10;   // 10번 생성하면 끝	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "redZone")
+	TSubclassOf<AActor> RedzoneClass;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "redZone")
+	AActor* VisualRedZone;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BlueHole")
 	TSubclassOf<ABlueHole> BlueHoleClass;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BlueHole")
@@ -172,6 +185,18 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Inventory")
 	UDataTable* ItemTable;
 
-	void SpawnItemByServer(int32 itemRow);
+	TSubclassOf<AActor> GetRealActiveClassByID(int32 TargetID);
+	
 	bool bInitialized;
+
+	const int MaxCharacterPacketsPerTick = 50;
+	const int MaxVehiclePacketsPerTick = 5;
+
+	void PorcessCharacterPacket();
+	void ProcessSpawnAIPacket();
+	void ProcessDamagePacket();
+	void ProcessDeathPacket();
+	void ProcessConnectionPacket();
+	void ProcessItemPacket();
+	void ProcessVehiclePacket();
 };

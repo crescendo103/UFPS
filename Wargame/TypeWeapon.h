@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "TypeWeapon.generated.h"
-
+/*
 UENUM(BlueprintType)
 enum class EWeaponType : uint8
 {
@@ -11,5 +11,5 @@ enum class EWeaponType : uint8
     Grenade UMETA(DisplayName = "Grenade"),  
     Melee UMETA(DisplayName = "Melee")
 };
-
+*/
 

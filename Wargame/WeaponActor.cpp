@@ -27,7 +27,7 @@ AWeaponActor::AWeaponActor()
     // 콜리전 설정
     TriggerSphere->InitSphereRadius(50.f); // 구체 반지름
     TriggerSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-    TriggerSphere->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
+    TriggerSphere->SetCollisionObjectType(ECollisionChannel::ECC_GameTraceChannel4);
     TriggerSphere->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
     TriggerSphere->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap); // 플레이어만 감지
 
@@ -36,7 +36,7 @@ AWeaponActor::AWeaponActor()
 
     bPickedUp = false;
     EffectComponent = CreateDefaultSubobject<UItemEffectComponent>(TEXT("NIEF"));
-    EffectComponent->SetupAttachment(RootComponent);
+    EffectComponent->SetupAttachment(Mesh, TEXT("EffectSocket"));
 
     SpawnComponent = CreateDefaultSubobject<UWeaponUseComponent>(TEXT("SPItem"));
     SpawnComponent->SetupAttachment(Mesh, TEXT("SpawnPoint"));
@@ -152,14 +152,6 @@ AWeaponCompo* AWeaponActor::GetMyGunCompo()
     return myGunCompo;
 }
 
-void AWeaponActor::UseItem()
-{
-    if (EffectComponent)
-    {
-        EffectComponent->PlayEffect();
-    }
-}
-
 void AWeaponActor::SpawnItem(FVector startPos, FVector startRot)
 {
     if (SpawnComponent)
@@ -167,6 +159,13 @@ void AWeaponActor::SpawnItem(FVector startPos, FVector startRot)
         FVector startedPos = Mesh->GetSocketLocation(TEXT("SpawnPoint"));
         //FVector startRot = Mesh->GetSocketRotation(TEXT("SpawnPoint")).Vector();
         SpawnComponent->UseWeapon(Owner, startedPos, startRot);
+        SpawnComponent->SendBulletPacket(startPos, startRot);//서버 전송
+    }
+
+    if (EffectComponent)
+    {
+        EffectComponent->PlayStartSound();
+        EffectComponent->PlayStartEffect();
     }
 }
 
@@ -196,4 +195,9 @@ void AWeaponActor::sendItemPacket()
 int32 AWeaponActor::GetItemSpawnID()
 {
     return ItemSpawnID;
+}
+
+FVector AWeaponActor::GetGunStartLocation()
+{
+    return Mesh->GetSocketLocation(TEXT("muzzleSocket"));
 }

@@ -82,12 +82,17 @@ bool UTrashBorder::NativeOnDrop(
     UMyServer* MyServer = GetGameInstance()->GetSubsystem<UMyServer>();
     MyServer->MoveItem(packet);
 
+    OwnerInventory->Owner->setCurrentWeapon(EWeaponType::Melee);
+
+
     if (DragOp->ItemActor->GetAttachParentActor())
     {
         // 지금 다른 Actor에 붙어 있음
         DragOp->ItemActor->DetachFromActor(
             FDetachmentTransformRules::KeepWorldTransform
         );
+        OwnerInventory->Owner->setCurrentWeapon(EWeaponType::Melee);
+        OwnerInventory->Owner->resetCurrentGunWeapon();
 
         if (USphereComponent* Sphere =
             Cast<AWeaponActor>(DragOp->ItemActor)->GetTriggerSphere())
@@ -96,37 +101,7 @@ bool UTrashBorder::NativeOnDrop(
             Sphere->SetGenerateOverlapEvents(true);
             
 
-            Sphere->UpdateOverlaps();
-            // ===== 🔍 디버그 로그 시작 =====
-            UE_LOG(LogTemp, Warning, TEXT("===== TriggerSphere Debug ====="));
-            UE_LOG(LogTemp, Warning, TEXT("CollisionEnabled : %d"),
-                (int32)Sphere->GetCollisionEnabled());
-
-            UE_LOG(LogTemp, Warning, TEXT("GenerateOverlapEvents : %s"),
-                Sphere->GetGenerateOverlapEvents() ? TEXT("TRUE") : TEXT("FALSE"));
-
-            UE_LOG(LogTemp, Warning, TEXT("CollisionObjectType : %d"),
-                (int32)Sphere->GetCollisionObjectType());
-
-            UE_LOG(LogTemp, Warning, TEXT("SphereLocation : %s"),
-                *Sphere->GetComponentLocation().ToString());
-
-            UE_LOG(LogTemp, Warning, TEXT("SphereRadius : %f"),
-                Sphere->GetScaledSphereRadius());
-
-            TArray<AActor*> OverlappingActors;
-            Sphere->GetOverlappingActors(OverlappingActors);
-
-            UE_LOG(LogTemp, Warning, TEXT("OverlappingActors Count : %d"),
-                OverlappingActors.Num());
-
-            for (AActor* Actor : OverlappingActors)
-            {
-                UE_LOG(LogTemp, Warning, TEXT(" - Overlap Actor : %s"),
-                    *Actor->GetName());
-            }
-            UE_LOG(LogTemp, Warning, TEXT("=============================="));
-            // ===== 🔍 디버그 로그 끝 =====
+            Sphere->UpdateOverlaps();            
         }
     }
 

@@ -17,6 +17,8 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
     TSubclassOf<class ABlueHole> BlueHoleClass;
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    TSubclassOf<class AActor> RedzoneClass;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
     TSubclassOf<class AMyGrenade> GrenadeClass;
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
     TSubclassOf<class ABullet> BulletClass;
@@ -24,4 +26,7 @@ public:
     TSubclassOf<class AMyEnemy> EnermyClass;
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
     TSubclassOf<class AAIEnemy> AIClass;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    UDataTable* ItemTable;
 };

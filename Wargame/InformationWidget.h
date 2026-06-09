@@ -4,29 +4,28 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "killAccountWidget.generated.h"
+
+#include "InformationWidget.generated.h"
 
 
-class UTextBlock;
 /**
  * 
  */
+
+class UTextBlock;
 UCLASS()
-class FPS_API UkillAccountWidget : public UUserWidget
+class FPS_API UInformationWidget : public UUserWidget
 {
 	GENERATED_BODY()
-	
 public:
-	void UpdateDeathUI(FString killerName, FString victimName);
-	
+	void UpdateInformationUI(FString information);
+
 	//  UMG에서 BindWidget 체크해야 함
 	UPROPERTY(meta = (BindWidget))
-	UTextBlock* DeathText;
+	UTextBlock* InformaitonText;
 
 	UPROPERTY(meta = (BindWidgetAnim), Transient)
 	UWidgetAnimation* FadeAnim;
-	UPROPERTY()
-	FString KillerName;
 protected:
 	virtual void NativeConstruct() override;
 };

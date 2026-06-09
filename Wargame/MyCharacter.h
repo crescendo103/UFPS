@@ -42,6 +42,7 @@ class USpringArmComponent; // 스프링 암 컴포넌트 추가
 class UCameraComponent;    // 카메라 컴포넌트 추가
 class AHelicopter;
 class UPawnManager;
+class APawnVehicle;
 UCLASS()
 class FPS_API AMyCharacter : public ACharacter
 {
@@ -68,9 +69,10 @@ public:
     void OnOverlapWithItem(AActor* OverlappedActor, AActor* OtherActor);
     UFUNCTION()
     void OnOverlapEndWithItem(AActor* OverlappedActor, AActor* OtherActor);
-    AVisualGrenade* GetVisualGrenadePointer();
+    
     void WeaponAttach(AActor* weapon, FName sockname);
-
+    void setCurrentWeapon(EWeaponType type);
+    void resetCurrentGunWeapon();
 public:
     // =============== Input System 관련 UPROPERTY 변수들 ===============
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
@@ -102,7 +104,7 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
     UInputAction* TestAction;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
-    UInputAction* GunCompoAction;
+    UInputAction* AimAction;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
     UInputAction* GlobalMapAction;
 
@@ -136,26 +138,28 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Animation")
     float Pitch;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Animation")
-    bool bIsDeath;
+    bool bIsDeath;    
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Animation")
-    bool bIsHaveGun;
+    bool isSubWeaponActive;
+
+
+    
+
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SocketName")
-    FName GunSocket;
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SocketName")
-    AWeaponBase* Weapon;
+    FName GunSocket;    
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
-    AActor* SubItem;
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
-    AVisualGrenade* VisualGrenade;
+    AActor* SubItem;    
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ViewPoint")
     FVector2D ScreenCenter;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ViewPoint")
     APlayerController* PC;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Myserver")
     UMyServer* MyServer;
-
+    int32 MyOwner;
     
+    void SetMyId(int32 id);
+    int32 GetMyId();
 
     UPROPERTY(EditDefaultsOnly, Category = "UI")
     TSubclassOf<UMyInventory> InventoryWidgetClass;//블루프린트 위젯 설계도
@@ -163,17 +167,8 @@ public:
     UMyInventory* InventoryWidget;
 
     
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-    TSubclassOf<AWeaponBase> WeaponClass;
-    /*
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-    TSubclassOf<AMyGrenade> GrenadeClass;
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-    TSubclassOf<ABullet> BulletClass;    
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-    TSubclassOf<AMyEnemy> EnermyClass;
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-    TSubclassOf<AAIEnemy> AIClass;*/
+    
+   
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
     TSubclassOf<AVisualGrenade> VisualGrenadeClass;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
@@ -198,8 +193,13 @@ public:
     USceneCaptureComponent2D* minimapCapture;
     UPROPERTY(VisibleAnywhere, Category = "MinimapCamera")
     UPaperSpriteComponent* minimapSprite;
+    UPROPERTY(VisibleAnywhere, Category = "MinimapCamera")
+    UPaperSpriteComponent* globalSprite;
     UPROPERTY()
     UTextureRenderTarget2D* MinimapRT;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    USkeletalMeshComponent* MarkMesh;
 
     int32 test;
 
@@ -232,7 +232,7 @@ public:
     void ChangeFirstWeapon();
     void ChangeSecondWeapon();
     void MouseWheel(const FInputActionValue& Value);
-    AWeaponBase* GetWeaponBase();
+    
     
     void InitScreenCenter();
     void CameraLineTrace();
@@ -273,17 +273,21 @@ public:
     UCP_BloodEffect* HitPostProcessComp;
 
 
-    void GunCompoActive();
-    void GUnCompoDeActive();
+    void AimActive();
+    void AimDeActive();
     void Die(int32 CauserCharacterId);
 
     UPROPERTY()
     AWeaponActor* CurrentGunWeapon;
     
-
+    /*5-23
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
-    TSubclassOf<AActor> SubItemClass;
+    TSubclassOf<AActor> SubItemClass;*/
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
+    FSubItemData SubItemData;
     
+
+    void SetSubItemData(FSubItemData subData);
     //추가
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
     UAnimMontage* PunchMontage;
@@ -307,4 +311,12 @@ public:
         TSubclassOf<ABomb> BombClass;
         UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BlueHole")
         TSubclassOf<ABlueHole> BlueHoleClass;
+
+
+        UPROPERTY()
+        APawnVehicle* CurrentVehicle;
+
+        bool bIsDeadFinal = false;
+        FTimerHandle WaitKillerNameHandle;
+        int32 CurrentHitMeCharacterID;
 };

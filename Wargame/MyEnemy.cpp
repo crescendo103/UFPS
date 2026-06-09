@@ -12,6 +12,7 @@ AMyEnemy::AMyEnemy()
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	bIsDeadFinal = false;
 }
 
 // Called when the game starts or when spawned
@@ -37,6 +38,15 @@ void AMyEnemy::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 void AMyEnemy::SetSPD(FEnemyState EnemyData)
 {
+	//이미 죽었으면 서버 값 무시
+	if (bIsDeadFinal)
+	{
+		IsDeath = true;
+		return;
+	}
+
+	bool bPrevDeath = IsDeath;
+
 	CurrentSpeed = EnemyData.Speed;
 	Position = EnemyData.Position;
 	Direction = EnemyData.Direction;
@@ -44,7 +54,14 @@ void AMyEnemy::SetSPD(FEnemyState EnemyData)
 	IsFire = EnemyData.isfire;
 	IsDeath = EnemyData.isdeath;
 	IsHeal = EnemyData.isHeal;
-	IsHaveGun = EnemyData.isHaveGun;
+	WeaponType = EnemyData.WeaponType;
+	AimActive = EnemyData.AimActive;
+
+	
+	if (IsDeath) {
+		bIsDeadFinal = true;
+	}
+	
 }
 
 void AMyEnemy::SetIgnoreCharacterId(int id)
@@ -57,3 +74,26 @@ int AMyEnemy::GetIgnoreCharacterId()
 	return IgnoreCharacterID;
 }
 
+void AMyEnemy::ActorStateInWorldByVehicle(bool hide)
+{
+	if (hide) {
+		SetActorHiddenInGame(true);
+		SetActorEnableCollision(false);		
+	}
+	else {
+		SetActorHiddenInGame(false);
+		SetActorEnableCollision(true);
+	}	
+}
+
+void AMyEnemy::AttachWeaponActor(AActor* Actor)
+{
+	UE_LOG(LogTemp, Warning, TEXT("AttachWeaponActor"));
+	if (!Actor) return;
+	UE_LOG(LogTemp, Warning, TEXT("AttachWeaponActor !actor"));
+	Actor->AttachToComponent(
+		GetMesh(),
+		FAttachmentTransformRules::SnapToTargetIncludingScale,
+		TEXT("HandSocket")
+	);
+}

@@ -50,9 +50,11 @@ public:
     void SetSize();
 
     float MeshBaseRadius;
-    bool isDone;
+    
 
     float TargetRadius;
     FTimerHandle timerHandle;
-    void SetTargetRadius();
+    
+    void SetNextZone();
+    void SetOverlapActive(bool state);
 };

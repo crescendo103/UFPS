@@ -2,15 +2,20 @@
 
 
 #include "Bomb.h"
-#include "SoundComponent.h"
+#include "ItemEffectComponent.h"
+
 // Sets default values
 ABomb::ABomb()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+
+	BombMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BombMesh"));	
+	RootComponent = BombMesh;
+
 	CollisionComponent = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComponent"));
-	CollisionComponent->InitSphereRadius(5.0f);
-	RootComponent = CollisionComponent;
+	CollisionComponent->InitSphereRadius(5.0f);	
+	CollisionComponent->SetupAttachment(RootComponent);
 
 	// Projectile
 	PojectileCompo = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovementComponent"));
@@ -18,19 +23,13 @@ ABomb::ABomb()
 	PojectileCompo->MaxSpeed = 1000.f;
 	PojectileCompo->bRotationFollowsVelocity = false;
 	PojectileCompo->bShouldBounce = false;
-
 	PojectileCompo->SetUpdatedComponent(CollisionComponent);
 
 	// Audio
-	BulletAudio = CreateDefaultSubobject<USoundComponent>(TEXT("BulletAudio"));
-	BulletAudio->SetupAttachment(RootComponent);
-	BulletAudio->bAutoActivate = false; // 자동 재생 끔
-	/*
-	GEngine->AddOnScreenDebugMessage(
-		-1,
-		3.f,
-		FColor::Cyan,
-		FString::Printf(TEXT("bomb 생성")));*/
+	ItemEffectComponent = CreateDefaultSubobject<UItemEffectComponent>(TEXT("EffectComponent"));
+	ItemEffectComponent->SetupAttachment(RootComponent);
+	
+	CollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &ABomb::OnOverlapSphere);
 }
 
 // Called when the game starts or when spawned
@@ -84,9 +83,9 @@ void ABomb::OnOverlapSphere(UPrimitiveComponent* OverlappedComponent, AActor* Ot
 		UDamageType::StaticClass()
 	);
 
-	BulletAudio->PlaySound();
+	//ItemEffectComponent->PlayDestroySound();
+	//ItemEffectComponent->PlayDestroyEffect();
 
-	
-
+	Destroy();
 }
 

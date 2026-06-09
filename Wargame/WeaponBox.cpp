@@ -31,7 +31,9 @@ bool UWeaponBox::NativeOnDrop(
         return false;
     
     OwnerInventory->AddWeaponBox(DragOp->ItemID, DragOp->ItemActor, DragOp->ItemSpawnID);
-    OwnerInventory->Owner->WeaponAttach(DragOp->ItemActor, "backSocket");
+    
+    FItemStaticData* data = OwnerInventory->GetItemStaticData(DragOp->ItemID);
+    // OwnerInventory->Owner->WeaponAttach(DragOp->ItemActor, "backSocket");    
 
     //OwnerInventory->RemoveItemWidget(DragOp->FromSlotIndex);    
     OwnerInventory->RemoveItemWidgetNoItemSpawn(DragOp->FromSlotIndex);

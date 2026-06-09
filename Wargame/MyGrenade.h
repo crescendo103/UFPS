@@ -15,10 +15,11 @@
 
 #include "GeometryCollection/GeometryCollectionComponent.h"
 
-
+#include "ItemEffectComponent.h"
 
 #include "MyGrenadeComponent.h"
 #include "MyGrenade.generated.h"
+
 
 
 
@@ -45,11 +46,13 @@ public:
 
 	void Throw(const FVector& Direction, float Power);
 
-	
+	void SetOwnerID(int32 owner);
+	int32 GetOwnerID();
+	int32 Owner;
 
-	virtual void ExplodeVoxel(FVector ExplosionCenter, float ExplosionRadius);
+	void ExplodeVoxel(FVector ExplosionCenter, float ExplosionRadius);
 	UFUNCTION()
-	virtual void Explode();
+	void Explode();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grenade")
 	UMyGrenadeComponent* grenadeCompo;
@@ -59,17 +62,24 @@ public:
 	UPROPERTY(VisibleDefaultsOnly, Category = "Grenade")
 	USphereComponent* CollisionComponent;
 
+	//부모에서 관리하는 수류탄 정보
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "feature")
+	UItemEffectComponent* EffectComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "feature")
+	float Damage = 20.f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "feature")
+	float ExplosionRadius = 200.f;
+	//------
+	// 
 	//new
 	UPROPERTY(VisibleDefaultsOnly, Category = "Grenade")
 	UStaticMeshComponent* StaticGrenadeMesh;
 
 	FTimerHandle ExplosionTimerHandle;
 
-	/*
-	UPROPERTY(EditDefaultsOnly, Category = "EffectNiagara")
-	UNiagaraSystem* GrenadeImpactEffect;
-	*/
+	
 	// 수정할 VoxelWorld (블루프린트에서 지정 가능)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel")
 	AVoxelWorld* TargetVoxelWorld;

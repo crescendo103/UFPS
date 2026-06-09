@@ -74,8 +74,7 @@ public:
 	UItemEffectComponent* EffectComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "feature")
 	UWeaponUseComponent* SpawnComponent;
-
-	void UseItem();
+	
 	void SpawnItem(FVector startPos, FVector startRot);
 
 	void SetMyOwner(AMyCharacter* myowner);
@@ -86,4 +85,6 @@ public:
 
 	void sendItemPacket();
 	int32 GetItemSpawnID();
+	FVector GetGunStartLocation();
+	
 };

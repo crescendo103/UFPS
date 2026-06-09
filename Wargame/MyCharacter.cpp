@@ -13,8 +13,9 @@
 #include "WeaponCompo.h"
 #include "CustomPlayerController.h"
 #include "FlashBang.h"
-
-
+#include "PawnVehicle.h"
+#include "killAccountWidget.h"
+#include "EndGameUIWidget.h"
 
 // Sets default values
 AMyCharacter::AMyCharacter()
@@ -103,6 +104,9 @@ AMyCharacter::AMyCharacter()
     minimapSprite->SetWorldRotation(FRotator::MakeFromEuler(FVector(-90.f, 0.f, 0.f)));
     minimapSprite->SetWorldScale3D(FVector(0.5f));
     minimapSprite->SetWorldLocation(FVector(0.f, 0.f, 300.f));
+
+    globalSprite = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("GlobalmapSprite"));
+    globalSprite->SetupAttachment(RootComponent);
     //인게임에서 보이지 않게 하는 옵션(캡처에서만 보이게 하는)
     //minimapSprite->bVisibleInSceneCaptureOnly = true;
 
@@ -116,6 +120,12 @@ AMyCharacter::AMyCharacter()
         CreateDefaultSubobject<UCP_BloodEffect>(
             TEXT("HitPostProcessComponent")
         );
+
+    MarkMesh =
+        CreateDefaultSubobject<USkeletalMeshComponent>(
+            TEXT("MarkMesh"));
+    MarkMesh->SetupAttachment(GetMesh());
+    CurrentWeapon = EWeaponType::Melee;
 }
 
 // Called when the game starts or when spawned
@@ -143,7 +153,7 @@ void AMyCharacter::BeginPlay()
     bIsStanding = true;
     bIsInAir = false;
     //bIsFirstPerson = false;
-    CurrentWeapon = EWeaponType::Melee;
+    
     CurrentHp = 100;
     MyServer = GetGameInstance()->GetSubsystem<UMyServer>();
     if (MyServer) {
@@ -159,31 +169,16 @@ void AMyCharacter::BeginPlay()
     IsInventoryActive = false;
     bIsHealKit = false;
     bIsDeath = false;
-    bIsHaveGun = false;
-    
+    isSubWeaponActive = false;
+    MyOwner = -1;
+    CurrentHitMeCharacterID = -2;
 
     // 오버랩 시작
     OnActorBeginOverlap.AddDynamic(this, &AMyCharacter::OnOverlapWithItem);
 
     // 오버랩 종료
     OnActorEndOverlap.AddDynamic(this, &AMyCharacter::OnOverlapEndWithItem);
-    //1-30
-    
-    if (WeaponClass) // BP_K2C1이 할당되어 있으면
-    {
-        FTransform SocketTransform = GetMesh()->GetSocketTransform(GunSocket, RTS_World);
-
-        FActorSpawnParameters SpawnParams;//스폰할 액터의 옵션 지정
-        SpawnParams.Owner = this;//소유자를 캐릭터로
-        SpawnParams.Instigator = GetInstigator();//이 무기를 스폰한 주체가 누군지
-        Weapon = GetWorld()->SpawnActor<AWeaponBase>(WeaponClass, SocketTransform, SpawnParams);
-        Weapon->SetActorEnableCollision(false);//임시
-        Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, GunSocket); 
-
-        Weapon->SetActorHiddenInGame(true);//test
-    
-    }
-        
+    //1-30                
     
    
     
@@ -222,25 +217,7 @@ void AMyCharacter::BeginPlay()
         TEXT("RightHandPinky4Socket"),
         RTS_World
     );
-
-    VisualGrenade = GetWorld()->SpawnActor<AVisualGrenade>(
-        VisualGrenadeClass,
-        SpawnTM,
-        SpawnParams
-    );
-
-    if (VisualGrenade)
-    {
-        VisualGrenade->AttachToComponent(
-            GetMesh(),
-            FAttachmentTransformRules::SnapToTargetNotIncludingScale,
-            TEXT("RightHandPinky4Socket")
-        );
-
-        VisualGrenade->SetActorHiddenInGame(true);
-
         
-    }
 
     if (IsLocallyControlled())
     {
@@ -399,6 +376,13 @@ void AMyCharacter::InterActionRayCast()
         return;
     }
 
+    if (CurrentVehicle)
+    {
+        CurrentVehicle
+            ->EnterVehicle(this);
+        return;
+    }
+
     FVector Start;
     FRotator Rot;
     Controller->GetPlayerViewPoint(Start, Rot);
@@ -430,7 +414,7 @@ void AMyCharacter::InterActionRayCast()
     Params.bTraceComplex = true; // 중요
 
     FCollisionObjectQueryParams ObjectParams;
-    ObjectParams.AddObjectTypesToQuery(ECC_GameTraceChannel5); // Item
+    ObjectParams.AddObjectTypesToQuery(ECC_GameTraceChannel4); // Item
 
     bool bHit = GetWorld()->LineTraceSingleByObjectType(
         Hit,
@@ -616,18 +600,22 @@ void AMyCharacter::InZone()
     }
 }
 
-void AMyCharacter::GunCompoActive()
+void AMyCharacter::AimActive()
 {
     bIsZooming = true;
+    if (isSubWeaponActive && SubItemData.SubItemClass) {
+        GrenadeCalComponent->SetbShow(true);        
+        return;
+    }    
     //AimWidget->SetVisibility(ESlateVisibility::Hidden);
-
-
+     
+    
     if (!CurrentGunWeapon) {
         UE_LOG(LogTemp, Warning, TEXT("CurrentWeapon is NULL"));
         return;
     }
     
-    if (CurrentGunWeapon)
+    if (CurrentWeapon != EWeaponType::Melee &&CurrentGunWeapon)
     {
         FollowCamera->AttachToComponent(
             CurrentGunWeapon->Mesh,
@@ -640,9 +628,28 @@ void AMyCharacter::GunCompoActive()
     */
 }
 
-void AMyCharacter::GUnCompoDeActive()
+void AMyCharacter::AimDeActive()
 {
     bIsZooming = false;
+
+    // 보조무기 조준 중이었다면 확실하게 끄기
+    if (isSubWeaponActive && SubItemData.SubItemClass) {
+        if (GrenadeCalComponent)
+        {
+            GrenadeCalComponent->MouseVal = 0.f; // 휠 값도 안전하게 리셋
+            GrenadeCalComponent->SetbShow(false);
+        }
+        return;
+    }
+
+    // 🔴 [안전장치 추가] 혹시나 위 조건문이 타이밍 때문에 패스되었더라도, 
+    // 수류탄 스플라인이 켜져 있다면 여기서 무조건 꺼줍니다.
+    if (GrenadeCalComponent && GrenadeCalComponent->bShow)
+    {
+        GrenadeCalComponent->MouseVal = 0.f;
+        GrenadeCalComponent->SetbShow(false);
+    }
+
     //AimWidget->SetVisibility(ESlateVisibility::Visible);
     if (!CurrentGunWeapon) {
         UE_LOG(LogTemp, Warning, TEXT("CurrentWeapon is NULL"));
@@ -658,6 +665,12 @@ void AMyCharacter::GUnCompoDeActive()
 
 void AMyCharacter::Die(int32 CauserCharacterId)
 {
+
+    if (bIsDeadFinal)
+        return;
+
+    bIsDeadFinal = true;
+
     // 입력 막기
     APlayerController* PsdC = Cast<APlayerController>(GetController());
     if (PsdC)
@@ -665,15 +678,52 @@ void AMyCharacter::Die(int32 CauserCharacterId)
         DisableInput(PsdC);
     }
 
-    // 이동 멈추기
+    UWorld* World = GetGameInstance()->GetWorld();
+    if (!World) return;
+
+    ACustomPlayerController* controller =
+        Cast<ACustomPlayerController>(UGameplayStatics::GetPlayerController(World, 0));
+
+    if (!controller) return;
+
+    
+    UEndGameUIWidget* EndGameUI = controller->GetUEndGameUIWidget();
+    UkillAccountWidget* Widget = controller->GetDeathWidget();
+
+    if (EndGameUI && Widget)
+    {
+        GetWorld()->GetTimerManager().SetTimer(
+            WaitKillerNameHandle,
+            [this, EndGameUI, Widget, controller]()
+            {
+                if (!Widget)
+                    return;
+
+                if (!Widget->KillerName.IsEmpty())
+                {
+                    EndGameUI->UpdateEndGameUI(
+                        TEXT("Lose"),
+                        Widget->KillerName
+                    );
+
+                    controller->ShowEndGameUI();
+                    EndGameUI->PlaySequence();
+
+                    GetWorld()->GetTimerManager().ClearTimer(
+                        WaitKillerNameHandle
+                    );
+                }
+            },
+            0.1f,
+            true
+        );
+    }
+
+    // 이동 완전 정지
+    GetCharacterMovement()->StopMovementImmediately();
     GetCharacterMovement()->DisableMovement();
-
-    // 죽음 애니메이션 재생
-    //if (DeathMontage)
-    //{
-    //    PlayAnimMontage(DeathMontage);
-    //}
-
+    GetCharacterMovement()->SetMovementMode(MOVE_None);
+        
     
 
     FDeathPacket packet;
@@ -699,6 +749,11 @@ void AMyCharacter::Die(int32 CauserCharacterId)
 
     packet.causedCharacterId = CauserCharacterId;
     MyServer->MoveDeath(packet);
+}
+
+void AMyCharacter::SetSubItemData(FSubItemData subData)
+{
+    SubItemData = subData;
 }
 
 void AMyCharacter::PlayPunch()
@@ -777,11 +832,6 @@ void AMyCharacter::AddViewPortGlobalMap()
     bGlobalMap = !bGlobalMap;
 }
 
-AVisualGrenade* AMyCharacter::GetVisualGrenadePointer()
-{
-    return VisualGrenade;
-}
-
 void AMyCharacter::WeaponAttach(AActor* weapon, FName sockname)
 {
     if (weapon)
@@ -820,6 +870,20 @@ void AMyCharacter::WeaponAttach(AActor* weapon, FName sockname)
 
      
 }
+
+void AMyCharacter::setCurrentWeapon(EWeaponType type)
+{
+    CurrentWeapon = type;
+    UE_LOG(LogTemp, Warning, TEXT("CurrentWeapon : %d"), (int32)CurrentWeapon);
+}
+
+void AMyCharacter::resetCurrentGunWeapon()
+{
+    CurrentGunWeapon = nullptr;
+}
+
+
+
 
 void AMyCharacter::Tick(float DeltaTime)
 {
@@ -877,8 +941,14 @@ void AMyCharacter::Tick(float DeltaTime)
     man.IsFire = bIsFireing;
     man.IsDeath = bIsDeath;
     man.IsHeal = bIsHealKit;
-    man.IsHaveGun = bIsHaveGun;
-
+    if (isSubWeaponActive && SubItemData.SubItemClass) {
+        man.WeaponType = EWeaponType::Grenade;
+    }
+    else {
+        man.WeaponType = CurrentWeapon;
+    }
+    
+    man.AimActive = bIsZooming;
     if (MyServer) {
         MyServer->MoveClient(man);
     }
@@ -893,18 +963,23 @@ void AMyCharacter::Tick(float DeltaTime)
     }
     */
    
-  
+    if (MarkMesh)
+    {
+        MarkMesh->MarkRenderStateDirty();
+    }
     
 }
 
-AWeaponBase* AMyCharacter::GetWeaponBase()
+
+void AMyCharacter::SetMyId(int32 id)
 {
-    return Weapon;
+    MyOwner = id;
 }
 
-
-
-
+int32 AMyCharacter::GetMyId()
+{
+    return MyOwner;
+}
 
 void AMyCharacter::UpdateAnimationVariables()
 {
@@ -987,10 +1062,10 @@ void AMyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
         {
             EnhancedInputComponent->BindAction(TestAction, ETriggerEvent::Started, this, &AMyCharacter::PullDownHeli);
         }
-        if (GunCompoAction)
+        if (AimAction)
         {
-            EnhancedInputComponent->BindAction(GunCompoAction, ETriggerEvent::Started, this, &AMyCharacter::GunCompoActive);
-            EnhancedInputComponent->BindAction(GunCompoAction, ETriggerEvent::Completed, this, &AMyCharacter::GUnCompoDeActive);
+            EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &AMyCharacter::AimActive);
+            EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Completed, this, &AMyCharacter::AimDeActive);
         }
         if (GlobalMapAction)
         {
@@ -1081,6 +1156,9 @@ void AMyCharacter::StartFire()
     if (!IsLocallyControlled())
         return;
     
+    if (isSubWeaponActive)
+        return;
+    
     
     if (bIsFireing) return; // 이미 발사 중이면 무시
     UE_LOG(LogTemp, Warning, TEXT("bIsFireing true"));
@@ -1090,30 +1168,20 @@ void AMyCharacter::StartFire()
     if (CurrentWeapon == EWeaponType::HealKit) {
         TakeDamage(-20, FDamageEvent(), nullptr, nullptr);
         bIsHealKit = true;
+        return;
     }    
     else if (CurrentWeapon == EWeaponType::Grenade)
     {
         FVector HandLocation = GetMesh()->GetSocketLocation(GunSocket);
         //GrenadeCalComponent->SetStartPos(HandLocation);아마 안써
-        GrenadeCalComponent->SetbShow(true);
+
+        //GrenadeCalComponent->SetbShow(true);5-27
+
         return;
     }
-    else if (CurrentWeapon == EWeaponType::Rifle) {
-        if (!GetGameInstance()) {
-            UE_LOG(LogTemp, Warning,
-                TEXT("[Pawn:%s] GetGameInstance() is nullptr"),
-                *GetName());
-            return;
-        }
-        if (!MyServer) {
-            UE_LOG(LogTemp, Warning,
-                TEXT("[Pawn:%s] UMyServer Subsystem is nullptr"),
-                *GetName());
-            return;
-        }
-        UE_LOG(LogTemp, Warning,
-            TEXT("EWeaponType::Rifle"));
-        FVector StartPos = Weapon->GetGunStartLocation();
+    else if (CurrentWeapon == EWeaponType::Rifle) {       
+        /*
+        FVector StartPos = CurrentGunWeapon->GetGunStartLocation();
         FVector Dir = PC->GetControlRotation().Vector();
         FServerBullet Bullet;
         Bullet.Header.Type = (int32)EPacketType::Bullet;
@@ -1129,10 +1197,7 @@ void AMyCharacter::StartFire()
         Bullet.Speed = 1200.f;
         Bullet.Sendtime = FPlatformTime::Seconds();
         Bullet.flag = false;
-        MyServer->Shotoccurred(Bullet);
-        
-        
-        //bulletId += 1;
+        MyServer->Shotoccurred(Bullet); */       
     }
     else {
         PlayPunch();
@@ -1140,13 +1205,14 @@ void AMyCharacter::StartFire()
     
     
     if (CurrentGunWeapon) {
-        FVector StartPos = Weapon->GetGunStartLocation();
+        FVector StartPos = CurrentGunWeapon->GetGunStartLocation();
         FVector Dir = PC->GetControlRotation().Vector();
 
         //CurrentGunWeapon->UseItem();//이펙트 스폰아이템이 처리하는게 좋아보이네 3 29
         CurrentGunWeapon->SpawnItem(StartPos, Dir);//나는 내가그림
+        
     }
-    bIsFireing = false;
+    
 }
 
 void AMyCharacter::EndFire()
@@ -1158,38 +1224,39 @@ void AMyCharacter::EndFire()
     bIsHealKit = false;
     UE_LOG(LogTemp, Warning, TEXT("bIsFireing false"));
 
-    if (CurrentWeapon == EWeaponType::Grenade) 
-    {
-        //if (GrenadeClass)
-        if(SubItemClass)
-        {
-            
+    if (isSubWeaponActive)
+    {                
+        if(SubItemData.SubItemClass && SubItemData.Id!=0)
+        {            
+
             FTransform SocketTransform = GetMesh()->GetSocketTransform("RightHandPinky4Socket", RTS_World);
 
             FActorSpawnParameters SpawnParams;//스폰할 액터의 옵션 지정
             SpawnParams.Owner = this;//소유자를 캐릭터로
             SpawnParams.Instigator = GetInstigator();//이 무기를 스폰한 주체가 누군지
-            SubItem = GetWorld()->SpawnActor<AMyGrenade>(SubItemClass, SocketTransform, SpawnParams);
+            SubItem = GetWorld()->SpawnActor<AMyGrenade>(SubItemData.SubItemClass, SocketTransform, SpawnParams);
+            //SubItem = GetWorld()->SpawnActor<AMyGrenade>(GrenadeClass, SocketTransform, SpawnParams);
            
             AMyGrenade* Grenade = Cast<AMyGrenade>(SubItem);
-            
-            // 1. 액터의 회전값 가져오기
-            FRotator ThrowRot = GetActorRotation();
 
-            // 2. 위 / 아래 각도 추가 (Pitch)
-            ThrowRot.Pitch += VisualGrenade->AccumulateWheelVal;
+            FVector Direction = FVector::ForwardVector;
+            if (GrenadeCalComponent)
+            {
+                Direction = GrenadeCalComponent->GetFinalThrowDirection();
+            }
 
-            // 3. 회전 → 방향 벡터
-            FVector Direction = ThrowRot.Vector().GetSafeNormal();
 
             // 4. 던지기
-            Grenade->Throw(Direction, 1000.f);
-            VisualGrenade->AccumulateWheelVal = 0;
+            if (Grenade)
+            {
+                Grenade->Throw(Direction, 1000.f);
+            }
+            
 
             FGrenadePacket packet;
             packet.Header.Type = (int32)EPacketType::Grenade;
             packet.Header.Size = sizeof(FGrenadePacket);
-            packet.GrenadeId = -2;//쓰레기값
+            packet.GrenadeId = SubItemData.Id;//수류탄 ID
             packet.CharacterId = -2;//trash
             packet.X = SocketTransform.GetLocation().X;
             packet.Y = SocketTransform.GetLocation().Y;
@@ -1200,11 +1267,15 @@ void AMyCharacter::EndFire()
             packet.Power = 1000;
 
             MyServer->CreateGrenade(packet);
-        }
 
 
-        
-        GrenadeCalComponent->SetbShow(false);
+            // 조준이 끝났으므로 휠 누적값 초기화 및 예측선 끄기
+            if (GrenadeCalComponent)
+            {
+                GrenadeCalComponent->MouseVal = 0.f;
+                GrenadeCalComponent->SetbShow(false);
+            }
+        }            
     }
 }
 
@@ -1273,15 +1344,7 @@ void AMyCharacter::ChangeFirstWeapon()
     if (!IsLocallyControlled())
         return;
 
-    CurrentWeapon = EWeaponType::Rifle;
-
-    
-    VisualGrenade->SetActorHiddenInGame(true);
-
-    //기존총 활성화
-    Weapon->SetActorHiddenInGame(false);
-    //Weapon->SetActorEnableCollision(true);
-    Weapon->SetActorTickEnabled(true);
+    isSubWeaponActive = false;        
 }
 
 void AMyCharacter::ChangeSecondWeapon()
@@ -1289,32 +1352,27 @@ void AMyCharacter::ChangeSecondWeapon()
     if (!IsLocallyControlled())
         return;
 
-    CurrentWeapon = EWeaponType::Grenade;
-    
-    VisualGrenade->SetActorHiddenInGame(false);
-
-    //기존총 숨김처리
-    Weapon->SetActorHiddenInGame(true);      // 화면에서 숨김
-    //Weapon->SetActorEnableCollision(false); // 충돌 제거
-    Weapon->SetActorTickEnabled(false);     // Tick 끄기 (선택)
-
-    
+    isSubWeaponActive = true;        
 }
 
 void AMyCharacter::MouseWheel(const FInputActionValue& Value)
 {
     if (!IsLocallyControlled())
         return;
-    const float WheelValue = Value.Get<float>()*10.f;
+    const float WheelValue = Value.Get<float>()*2.0f;
 
-
-    //AMyGrenade* Grenade = Cast<AMyGrenade>(SubItem);
-    VisualGrenade->AddThrowAngle(WheelValue);
-    
+    // 계산 컴포넌트에 마우스 변위값을 누적시킵니다.
+    if (GrenadeCalComponent)
+    {
+        GrenadeCalComponent->SetMouseVal(WheelValue);
+    }         
 }
 
 float AMyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+    if (bIsDeadFinal)
+        return 0;
+
     Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
     // 🔹 Instigator 이름
@@ -1330,13 +1388,40 @@ float AMyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
         *CauserName
     );
 
-    // int32 전달값 꺼내기
-    ABullet* Bullet = Cast<ABullet>(DamageCauser);
     int32 OwnerId = -2;
-    if (Bullet)
+
+    if (ABullet* Bullet = Cast<ABullet>(DamageCauser))
     {
-        OwnerId = Bullet->GetBulletOwner();
-        UE_LOG(LogTemp, Warning, TEXT("Hit by characterid = %d"), OwnerId);
+        OwnerId = Bullet->GetOwnerID();
+
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("Hit by Bullet CharacterId = %d"),
+            OwnerId
+        );
+    }
+    else if (AMyGrenade* Grenade = Cast<AMyGrenade>(DamageCauser))
+    {
+        OwnerId = Grenade->GetOwnerID();
+
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("Hit by Grenade CharacterId = %d"),
+            OwnerId
+        );
+    }
+    else
+    {
+        OwnerId = CurrentHitMeCharacterID;
+
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("Hit by Melee CharacterId = %d"),
+            OwnerId
+        );
     }
 
     if (Cast<AFlashBang>(DamageCauser))
@@ -1363,16 +1448,7 @@ float AMyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 
 
 void AMyCharacter::OnOverlapWithItem(AActor* OverlappedActor, AActor* OtherActor)
-{
-    UE_LOG(LogTemp, Warning, TEXT("===== OnOverlapWithItem 호출 ====="));
-
-    UE_LOG(LogTemp, Warning, TEXT("OverlappedActor: %s"),
-        OverlappedActor ? *OverlappedActor->GetName() : TEXT("NULL"));
-
-    UE_LOG(LogTemp, Warning, TEXT("OtherActor: %s"),
-        OtherActor ? *OtherActor->GetName() : TEXT("NULL"));
-
-
+{    
     if (OtherActor && OtherActor->IsA(AWeaponActor::StaticClass()))
     {
         UE_LOG(LogTemp, Warning, TEXT("플레이어가 아이템 구체 안으로 들어왔습니다!"));

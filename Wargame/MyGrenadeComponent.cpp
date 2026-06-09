@@ -30,45 +30,6 @@ UMyGrenadeComponent::UMyGrenadeComponent()
 void UMyGrenadeComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	/*1230
-	if (!Spline)
-	{
-		Spline = NewObject<USplineComponent>(GetOwner());
-		Spline->RegisterComponent(); // 이거 필수
-		Spline->SetMobility(EComponentMobility::Movable);
-
-		if (USceneComponent* Root = GetOwner()->GetRootComponent())
-		{
-			Spline->AttachToComponent(
-				Root,
-				FAttachmentTransformRules::KeepRelativeTransform
-			);
-		}
-	}
-	*/
-	/*1230
-	Spline->SetVisibility(true);
-	Spline->SetHiddenInGame(false);
-	// ...
-	for (int32 i = 0; i < MaxSplineMeshes; i++)
-	{
-		USplineMeshComponent* Mesh =
-			NewObject<USplineMeshComponent>(GetOwner());
-
-		Mesh->SetStaticMesh(LineMesh);
-		Mesh->SetForwardAxis(ESplineMeshAxis::X);//위치갱신해야해
-		Mesh->SetMobility(EComponentMobility::Movable);
-		Mesh->AttachToComponent(
-			Spline,
-			FAttachmentTransformRules::KeepRelativeTransform
-		);
-
-		Mesh->RegisterComponent();
-		Mesh->SetVisibility(false);   // 숨겨둠
-
-		SplineMeshPool.Add(Mesh);
-	}
-	*/
 	
 
 	if (!TrajectoryNiagara)
@@ -159,30 +120,7 @@ void UMyGrenadeComponent::RayGrenade(const FVector Start, const FVector Forward,
 		TrajectoryNiagara,
 		TEXT("UserPoints"),
 		Points
-	);
-
-	
-	/*
-	//디버그
-	for (int32 i = 0; i < Result.PathData.Num() - 1; i++)
-	{
-		DrawDebugLine(
-			GetWorld(),
-			Result.PathData[i].Location,
-			Result.PathData[i + 1].Location,
-			FColor::Green,
-			false,
-			2.f,
-			0,
-			3.f
-		);
-	}
-	*/
-	
-	//진짜 던진다??
-	
-	
-	
+	);	
 }
 
 void UMyGrenadeComponent::SetBshow(bool state)

@@ -61,4 +61,5 @@ public:
 	void SetStartPos(FVector position);
 	void SetbShow(bool state);
 	void SetMouseVal(float val);
+	FVector GetFinalThrowDirection() const;
 };

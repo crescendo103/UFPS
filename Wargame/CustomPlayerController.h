@@ -9,6 +9,7 @@
 #include "Minimap.h"
 #include "WatingRoom.h"
 #include "PaperSprite.h"
+#include "InformationWidget.h"
 #include "StartMenuWidget.h"
 #include "CustomPlayerController.generated.h"
 
@@ -20,6 +21,9 @@ class UWD_HPBar;
 class UAimWidget;
 class UkillAccountWidget;
 class UGameConfigData;
+class AMinimapCaptureActor;
+class UEndGameUIWidget;
+
 UCLASS()
 class FPS_API ACustomPlayerController : public APlayerController
 {
@@ -43,8 +47,13 @@ public:
 	TSubclassOf<UkillAccountWidget> DeathLogWidgetClass;
 	UPROPERTY()
 	UkillAccountWidget* DeathLogWidget;
-
 	UkillAccountWidget* GetDeathWidget();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<UInformationWidget> InformationWidgetClass;
+	UPROPERTY()
+	UInformationWidget* InformationWidget;
+	UInformationWidget* GetInformationWidget();
 
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<ULoginWidget> LoginWidgetClass;//블루프린트 위젯 설계도
@@ -62,9 +71,6 @@ public:
 	UPROPERTY()
 	class UWD_HPBar* HpBarWidget;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Player")
-	TSubclassOf<AMyCharacter> PlayerCharacterClass;
-
 
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UMinimap> MinimapWidgetClass;//블루프린트 위젯 설계도
@@ -72,10 +78,32 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UGlobalMap> GlobalMapWidgetClass;//블루프린트 위젯 설계도
 
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UEndGameUIWidget> EndGameWidgetClass;//블루프린트 위젯 설계도
+
 	UPROPERTY()
 	class UGlobalMap* GlobalMapWidget;
+
+	UPROPERTY()
+	AMinimapCaptureActor* LocalCaptureActor;
+
+	UPROPERTY()
+	UTextureRenderTarget2D* LocalRT;
+
+	UPROPERTY()
+	UMaterialInstanceDynamic* LocalMID;
+
+
 	UPROPERTY()
 	UMinimap* MiniMapWidget;
+
+	UPROPERTY()
+	UEndGameUIWidget* EndGameWidget;
+	UEndGameUIWidget* GetUEndGameUIWidget();
+
+	UMinimap* GetMiniMapWidget();
+
+	UGlobalMap* GetGlobalMapWidget();
 protected:
 	virtual void BeginPlay() override;
 	bool isWatingRoom;
@@ -86,6 +114,10 @@ public:
 	void HiddenStartMenu();
 	void ShowMiniMap();
 	void HiddendMiniMap();
+	void ShowInformationText();
+	void HiddenInformationText();
+	void ShowEndGameUI();
+	void HiddenEndGameUI();
 	void SetTextTime(int time);
 	void SwitchWidget(bool startwidget, bool watingwidget);
 

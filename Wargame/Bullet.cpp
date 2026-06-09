@@ -4,6 +4,8 @@
 #include "Bullet.h"
 #include "SoundComponent.h"
 #include "MyCharacter.h"
+#include "ItemEffectComponent.h"
+#include "MyAudioComponent.h"
 
 // Sets default values
 ABullet::ABullet()
@@ -17,6 +19,14 @@ ABullet::ABullet()
 	//CollisionComponent->SetSimulatePhysics(true); 물리 시뮬?
 	RootComponent = CollisionComponent;
 
+
+	NearSoundSphere =
+		CreateDefaultSubobject<USphereComponent>(
+			TEXT("NearSoundSphere"));
+
+	NearSoundSphere->SetupAttachment(RootComponent);
+	NearSoundSphere->OnComponentBeginOverlap.AddDynamic(this, &ABullet::OnNearPlayer);
+
 	// 메쉬
 	StaticBulletMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BulletMesh"));
 	StaticBulletMesh->SetupAttachment(RootComponent);
@@ -24,8 +34,10 @@ ABullet::ABullet()
 
 	// Projectile
 	PojectileCompo = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovementComponent"));
-	PojectileCompo->InitialSpeed = 1000.f;
-	PojectileCompo->MaxSpeed = 1000.f;
+	PojectileCompo->InitialSpeed = 3000.f;
+	PojectileCompo->MaxSpeed = 3000.f;
+	PojectileCompo->ProjectileGravityScale = 0.f;
+
 	PojectileCompo->bRotationFollowsVelocity = false;
 	PojectileCompo->bShouldBounce = false;
 
@@ -35,21 +47,20 @@ ABullet::ABullet()
 	
 	CollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &ABullet::OnOverlapSphere);
 
-	// Audio
-	BulletAudio = CreateDefaultSubobject<USoundComponent>(TEXT("BulletAudio"));
-	BulletAudio->SetupAttachment(RootComponent);
-	BulletAudio->bAutoActivate = false; // 자동 재생 끔
+		
 
+	EffectComponent = CreateDefaultSubobject<UItemEffectComponent>(TEXT("EffectComponent"));
+	EffectComponent->SetupAttachment(RootComponent);
 	
 }
 
-void ABullet::SetBulletOwner(int32 owner)
+void ABullet::SetOwnerID(int32 owner)
 {
-	BulletOwner = owner;
+	Owner = owner;
 }
-int32 ABullet::GetBulletOwner()
+int32 ABullet::GetOwnerID()
 {
-	return BulletOwner;
+	return Owner;
 }
 /*
 void ABullet::ActiveBulletOverlap()
@@ -61,18 +72,19 @@ void ABullet::ActiveBulletOverlap()
 void ABullet::BeginPlay()
 {
 	Super::BeginPlay();
-	/*
-	GetWorld()->GetTimerManager().SetTimer(
-		OverlapTimerHandle,
-		this,
-		&ABullet::ActiveBulletOverlap,
-		0.000001f,
-		false
-	);*/
-
+	
 	SetLifeSpan(5.0f);
 
+	// Spawn Rotation 방향으로 자동 발사
+	FVector Direction =
+		GetActorRotation().Vector();
 
+	PojectileCompo->Velocity =
+		Direction * 3000.f;
+
+	UE_LOG(LogTemp, Warning,
+		TEXT("Dir = %s"),
+		*Direction.ToString());
 }
 
 // Called every frame
@@ -113,7 +125,9 @@ void ABullet::OnOverlapSphere(UPrimitiveComponent* OverlappedComponent, AActor* 
 	if (!OtherActor || OtherActor == GetOwner())
 		return;
 		
-
+	if (OtherActor == GetOwner()) {
+		return;
+	}
 	// 1. Owner와 겹치면 무조건 무시
 	/*
 	if (OtherActor == GetOwner()) {
@@ -141,12 +155,18 @@ void ABullet::OnOverlapSphere(UPrimitiveComponent* OverlappedComponent, AActor* 
 			*ParentName)
 	);
 
+	/*
 	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
 		GetWorld(),
 		BulletImpactEffect,
 		SweepResult.ImpactPoint,
 		SweepResult.ImpactNormal.Rotation()
-	);
+	);*/
+
+	if (EffectComponent) {
+		EffectComponent->PlayStartEffect();
+	}
+	
 
 	UGameplayStatics::ApplyDamage(
 		OtherActor,
@@ -156,33 +176,60 @@ void ABullet::OnOverlapSphere(UPrimitiveComponent* OverlappedComponent, AActor* 
 		UDamageType::StaticClass()
 	);
 
-	if (bPlayed) return;
-
 	
 
-	if (OtherActor) //&& OtherActor != GetOwner())
+	bHitTarget = true;
+
+	if (BulletHitSound)
 	{
-		/*
-		BulletAudio->PlaySound();
-		bPlayed = true;
-		*/
-		
-		AMyEnemy* mc = Cast<AMyEnemy>(OtherActor);
-
-		if (mc && mc->GetIgnoreCharacterId() != BulletOwner) {
-			BulletAudio->PlaySound();
-			bPlayed = true;
-
-		}
-		
+		UGameplayStatics::PlaySoundAtLocation(
+			GetWorld(),
+			BulletHitSound,
+			GetActorLocation(),
+			1.0f);
 	}
 	
+	
+}
+
+void ABullet::OnNearPlayer(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+		
+
+
+	if (OtherActor == GetOwner()) {
+		return;
+	}
+
+	if (bHitTarget)
+		return;
+
+	if (bPlayedWhizSound)
+		return;
+
+	//AMyCharacter* Player = Cast<AMyCharacter>(OtherActor);
+
+	//if (!Player)
+	//	return;
+
+	bPlayedWhizSound = true;
+
+	if (BulletWhizSound)
+	{	
+
+		UGameplayStatics::PlaySoundAtLocation(
+			GetWorld(),
+			BulletWhizSound,
+			GetActorLocation(),
+			1.0f); // 볼륨
+	}
+
 }
 
 
 
 void ABullet::Throw(const FVector& Direction, float Power)
 {
-	ShootBullet(Direction);
+	//ShootBullet(Direction);
 	UE_LOG(LogTemp, Warning, TEXT("Dir: %s"), *Direction.ToString());
 }

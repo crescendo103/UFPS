@@ -19,7 +19,8 @@
 DECLARE_DELEGATE_TwoParams(FBulletHitDelegate, int32 BulletId, int32 CharacterId);
 
 class USoundComponent;
-
+class UItemEffectComponent;
+class UMyAudioComponent;
 UCLASS()
 class FPS_API ABullet : public AActor
 {
@@ -50,31 +51,48 @@ public:
 		const FHitResult& SweepResult
 	);
 
+	UFUNCTION()
+	void OnNearPlayer(
+		UPrimitiveComponent* OverlappedComponent,
+		AActor* OtherActor,
+		UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex,
+		bool bFromSweep,
+		const FHitResult& SweepResult
+	);
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
 	UProjectileMovementComponent* PojectileCompo; 
 	// 구체 콜리전 컴포넌트입니다.
 	UPROPERTY(VisibleDefaultsOnly, Category = "Bullet")
 	USphereComponent* CollisionComponent;
 	UPROPERTY(VisibleDefaultsOnly, Category = "Bullet")
+	USphereComponent* NearSoundSphere;
+	UPROPERTY(VisibleDefaultsOnly, Category = "Bullet")
 	UStaticMeshComponent* StaticBulletMesh;
 
-	UPROPERTY(EditDefaultsOnly, Category = "EffectNiagara")
-	UNiagaraSystem* BulletImpactEffect;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "feature")
+	UItemEffectComponent* EffectComponent;
 
-	// 오디오 컴포넌트
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	class USoundComponent* BulletAudio;
+	// 맞았는지 여부
+	bool bHitTarget = false;
 
-	// 1회 재생용
-	bool bPlayed = false;
-	
+	// 휘익 소리 중복 방지
+	bool bPlayedWhizSound = false;
 
-	int32 BulletOwner;
+	// 휘익 소리
+	UPROPERTY(EditAnywhere, Category = "Audio")
+	USoundBase* BulletWhizSound;
+	//피격음
+	UPROPERTY(EditAnywhere, Category = "Audio")
+	USoundBase* BulletHitSound;
+
+	int32 Owner;
 	FTimerHandle OverlapTimerHandle;
 
-	void SetBulletOwner(int32 owner);
-	int32 GetBulletOwner();
-	void ActiveBulletOverlap();
+	void SetOwnerID(int32 owner);
+	int32 GetOwnerID();
+	
 
 protected:
 	// Called when the game starts or when spawned

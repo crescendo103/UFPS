@@ -34,6 +34,8 @@ public:
 	//virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 	void SetIgnoreCharacterId(int id);
 	int GetIgnoreCharacterId();
+	void ActorStateInWorldByVehicle(bool hide);
+	void AttachWeaponActor(AActor* actor);
 
 	UPROPERTY(BlueprintReadOnly, Category = "Anim")
 	float CurrentSpeed;
@@ -52,10 +54,15 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Anim")
 	bool IsHeal;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Anim")
-	bool IsHaveGun;
+	EWeaponType WeaponType;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Anim")
+	bool AimActive;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Myserver")
 	UMyServer* MyServer;
 	
 	int IgnoreCharacterID;
+	
+
+	bool bIsDeadFinal = false;
 };

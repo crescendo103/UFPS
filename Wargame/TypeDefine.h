@@ -20,7 +20,9 @@ enum class EPacketType : int
     Melee=9,
     Redzone=10,
     BlueHole=11,
-    Item=12
+    Item=12,
+    BoradCast=13,
+    Vehicle = 14
 };
 
 UENUM(BlueprintType)
@@ -29,6 +31,17 @@ enum class EItemType : uint8
     Weapon = 0,
     Character = 1,
     Hit = 2,
+    Grenade = 3
+};
+
+UENUM(BlueprintType)
+enum class EWeaponType : uint8
+{
+    Rifle = 0,
+    HealKit = 1,
+    Melee = 2,
+    FlashGrenade = 3,
+    Grenade = 4
 };
 
 UENUM(BlueprintType)
@@ -126,8 +139,9 @@ struct FCharacterPacket
     UPROPERTY()
     bool IsHeal;
     UPROPERTY()
-    bool IsHaveGun;
-
+    EWeaponType WeaponType;
+    UPROPERTY()
+    bool AimActive;
 };
 USTRUCT(BlueprintType)
 struct FItemStaticData : public FTableRowBase
@@ -352,5 +366,66 @@ struct FEnemyState
     UPROPERTY()
     bool isHeal;
     UPROPERTY()
-    bool isHaveGun;
+    EWeaponType WeaponType;
+    UPROPERTY()
+    bool AimActive;
+};
+
+USTRUCT(BlueprintType)
+struct FBrodcastMessage
+{
+    GENERATED_BODY()
+
+    UPROPERTY()
+    FPacketHeader Header;   
+
+    char   Information[128];
+    
+};
+
+USTRUCT(BlueprintType)
+struct FSubItemData
+{
+    GENERATED_BODY()
+
+
+    // 수류탄 클래스 저장
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    TSubclassOf<AActor> SubItemClass;
+
+    // 수류탄 id
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int32 Id = 0;
+};
+
+USTRUCT(BlueprintType)
+struct FVehiclePacket
+{
+    GENERATED_BODY()
+
+    UPROPERTY()
+    FPacketHeader Header;
+    //1총알, 2캐릭터 위치
+
+    UPROPERTY()
+    int32 carId;
+
+    UPROPERTY()
+    int32 ownerId;
+
+    UPROPERTY()
+    float X;
+    UPROPERTY()
+    float Y;
+    UPROPERTY()
+    float Z;
+    UPROPERTY()
+    float DirX;
+    UPROPERTY()
+    float DirY;
+    UPROPERTY()
+    float DirZ;   
+
+    UPROPERTY()
+    bool IsHaveCharacter;
 };

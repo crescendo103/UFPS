@@ -110,12 +110,12 @@ public:
     UPROPERTY(EditDefaultsOnly, Category = "Inventory")
     TSubclassOf<UWeaponBoxPlayer> WeaponBoxPlayerWidgetClass;
 
-
+    /*
     UPROPERTY(EditDefaultsOnly, Category = "Inventory")
     UInventoryGunCompoBox* GunCompoWidget;
     UPROPERTY(EditDefaultsOnly, Category = "Inventory")
     TSubclassOf<UInventoryGunCompoBox> GunCompoWidgetClass;
-
+    */
 
     UPROPERTY()
     AMyCharacter* Owner;

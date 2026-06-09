@@ -33,6 +33,7 @@
 #include "Misc/ScopeLock.h"
 #include "ItemManagerSubsystem.h"
 #include "GameConfigData.h"
+#include "PawnVehicle.h"
 
 //FCriticalSection SendMutex;
 
@@ -91,17 +92,13 @@ void UMyServer::Initialize(FSubsystemCollectionBase& Collection)
 		GetWorld()->GetTimerManager().SetTimer(
 			ServerTimer,
 			this,
-			&UMyServer::SpawnActor,
+			&UMyServer::ProcessPacket,
 			0.016f,
 			true
 		);
 		UE_LOG(LogTemp, Warning,
 			TEXT("SetTimer Complete"));
-	}
-
-	
-	
-	//MoveTime(5);
+	}		
 }
 
 void UMyServer::Deinitialize()
@@ -116,6 +113,9 @@ void UMyServer::Deinitialize()
 		delete ClientThread;
 		ClientThread = nullptr;
 	}
+
+	
+
 }
 
 void UMyServer::Init(UGameConfigData* Config)
@@ -128,31 +128,15 @@ void UMyServer::Init(UGameConfigData* Config)
 	SetEnermyClass(Config->EnermyClass);
 	SetAiClass(Config->AIClass);
 	SetGrenadeClass(Config->GrenadeClass);
+	RedzoneClass = Config->RedzoneClass;
+	ItemTable = Config->ItemTable;
 	bInitialized = true;
+	Items = Config;
 }
 
 void UMyServer::Tick(float DeltaTime)
 {
-	//SpawnActor();
-
-	/*
-	if (Usedbullet2.Num() == 0)
-		return;
-
-	for (auto It = Usedbullet2.CreateIterator(); It; ++It)
-	{
-		int32 Id = It.Key();
-
-		if (ABullet* Bullet = SpawnItems.FindRef(Id)) //  FindRef
-		{
-			Bullet->Destroy();      // GameThread OK
-			SpawnItems.Remove(Id);  // Remove OK (순회 중 아님)
-		}
-	}
-
-	Usedbullet2.Empty(); // 반드시
-
-	*/
+	
 }
 
 TStatId UMyServer::GetStatId() const
@@ -177,13 +161,16 @@ void UMyServer::MoveClient(FCharacterPacket bullet)
 {
 	FScopeLock Lock(&SendMutex);
 
-	UE_LOG(LogTemp, Warning, TEXT("sizeof FCharacterPacket = %d"), sizeof(FCharacterPacket));
-	UE_LOG(LogTemp, Warning, TEXT("Send Header.Size = %d"), bullet.Header.Size);
+	
 	SOCKET Sock = reinterpret_cast<SOCKET>(SocketHandle);
 	
 	bullet.CharacterId = MyOwner;//처음에 -1로 초기화
 	
 	SendAll((char*)&bullet, sizeof(FCharacterPacket));
+
+	UE_LOG(LogTemp, Warning,
+		TEXT("Client sizeof(FCharacterPacket) = %d"),
+		sizeof(FCharacterPacket));
 	/*
 	int nSendLen = send(Sock, (char*)&bullet, sizeof(FCharacterPacket), 0);
 	
@@ -197,8 +184,7 @@ void UMyServer::MoveClient(FCharacterPacket bullet)
 		UE_LOG(LogTemp, Warning, TEXT("Sent bytes = %d"), nSendLen);
 	}*/
 	
-	UE_LOG(LogTemp, Warning,
-		TEXT("MoveClient Complete"));
+	
 }
 
 void UMyServer::MoveAI(FCharacterPacket packet)
@@ -267,6 +253,21 @@ void UMyServer::MoveItem(FItemPacket packet)
 	SendAll((char*)&packet, sizeof(FItemPacket));
 }
 
+void UMyServer::MoveBroadCast(FBrodcastMessage packet)
+{
+	FScopeLock Lock(&SendMutex);
+	SOCKET Sock = reinterpret_cast<SOCKET>(SocketHandle);	
+	SendAll((char*)&packet, sizeof(FBrodcastMessage));
+}
+
+void UMyServer::MoveVehicle(FVehiclePacket packet)
+{
+	FScopeLock Lock(&SendMutex);
+	SOCKET Sock = reinterpret_cast<SOCKET>(SocketHandle);
+	packet.ownerId = MyOwner;
+	SendAll((char*)&packet, sizeof(FVehiclePacket));
+}
+
 void UMyServer::Shotoccurred(FServerBullet bullet)
 {
 	FScopeLock Lock(&SendMutex);
@@ -307,238 +308,15 @@ void UMyServer::SetThreadSocketHandle()
 		TEXT("SetThreadSocketHandle inside2"));
 }
 
-void UMyServer::SpawnActor()
-{
-	//UE_LOG(LogTemp, Warning,
-		//TEXT("SpawnActor 안입니다"));
-
-	
-
-	FCharacterPacket data;
-	while (ClientThread->CharacterQueue->Dequeue(data))
-	{
-		FVector Pos2 = FVector(data.X, data.Y, data.Z);
-		FVector Dir2 = FVector(data.DirX, data.DirY, data.DirZ);
-		/*
-		UE_LOG(LogTemp, Warning,
-			TEXT("EnemyPos => X: %.3f Y: %.3f Z: %.3f  DeltaTime: %.6f id = %d"),
-			data.X,
-			data.Y,
-			data.Z,
-			data.Sendtime,
-			data.CharacterId
-		);*/
-		//ai
-
-		if (data.CharacterId < -90) {
-			//이동로직
-			// 충돌 무시하고 즉시 이동
-			UE_LOG(LogTemp, Warning,
-				TEXT("aiPos => X: %.3f Y: %.3f Z: %.3f  DeltaTime: %.6f id = %d"),
-				data.DirX,
-				data.DirY,
-				data.DirZ,
-				data.Sendtime,
-				data.CharacterId
-			);
-
-			if (SpawnAis.Contains(data.CharacterId)) {
-				AAIEnemy* ai = SpawnAis[data.CharacterId];
-				ai->BB->SetValueAsVector(
-					TEXT("TargetLocation"),
-					Dir2
-				);//?
-			}
-			else {
-				continue;
-			}
-
-		}
-		else {
-
-		if (!SpawnEnemys.Contains(data.CharacterId) && EnermyClass)
-		{
-
-			UE_LOG(LogTemp, Warning,
-				TEXT("insidethe enemy spawn id = %d"), data.CharacterId
-			);
-
-			FTransform SpawnTransform;
-			SpawnTransform.SetLocation(Pos2);			
-
-			FActorSpawnParameters SpawnParams;//스폰할 액터의 옵션 지정
-			//SpawnParams.Owner = this;//소유자를 캐릭터로
-			//SpawnParams.Instigator = GetInstigator();//이 무기를 스폰한 주체가 누군지	
-			SpawnParams.SpawnCollisionHandlingOverride =
-				ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-			AMyEnemy* SpawnEnemy = GetWorld()->SpawnActor<AMyEnemy>(EnermyClass, SpawnTransform, SpawnParams);
-			//SpawnEnemy->SetActorEnableCollision(false);2-12
-			SpawnEnemy->SetIgnoreCharacterId(MyOwner);
-			SpawnEnemys.Add(data.CharacterId, SpawnEnemy);
-
-			FEnemyState enemyData = { data.Speed, Pos2, Dir2, data.IsJump, data.IsFire, data.IsDeath, data.IsHeal , data.IsHaveGun };
-			SpawnEnemy->SetSPD(enemyData);
-			//MyOwner = data.CharacterId;
-			//3-21 적이 MyOwner이군요...
-
-		}
-		else {
-			//이동로직
-			// 충돌 무시하고 즉시 이동
-			/*
-			UE_LOG(LogTemp, Warning,
-				TEXT("moveSpawnenemy")
-			);
-			*/
-			AMyEnemy* Enemy = SpawnEnemys[data.CharacterId];
-			Enemy->SetActorLocation(Pos2);
-			FRotator LookRot = Dir2.Rotation();
-			Enemy->SetActorRotation(LookRot);
-			Enemy->GetCharacterMovement()->Velocity = Dir2 * data.Speed;
-			FEnemyState enemyData = { data.Speed, Pos2, Dir2, data.IsJump, data.IsFire, data.IsDeath, data.IsHeal , data.IsHaveGun };
-			Enemy->SetSPD(enemyData);
-		}
-	}
-	}	
-	
-	//ai
-	FSpawnAIPacket aidata;
-	while (ClientThread->AISpawnQueue->Dequeue(aidata))
-	{
-		FVector Pos2 = FVector(aidata.X, aidata.Y, aidata.Z);		
-		
-		UE_LOG(LogTemp, Warning,
-			TEXT("Ai respon => X: %.3f Y: %.3f Z: %.3f id = %d"),
-			aidata.X,
-			aidata.Y,
-			aidata.Z,			
-			aidata.AiID
-		);
-
-		if (!SpawnAis.Contains(aidata.AiID) && AiClass)
-		{
-
-			UE_LOG(LogTemp, Warning,
-				TEXT("insidethe ai spawn id = %d"), aidata.AiID
-			);
-
-			FTransform SpawnTransform;
-			SpawnTransform.SetLocation(Pos2);			
-
-			FActorSpawnParameters SpawnParams;//스폰할 액터의 옵션 지정					
-			SpawnParams.SpawnCollisionHandlingOverride =
-				ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-			AAIEnemy* Spawnai = GetWorld()->SpawnActor<AAIEnemy>(AiClass, SpawnTransform, SpawnParams);
-			//Spawnai->SetActorEnableCollision(false);
-
-			SpawnAis.Add(aidata.AiID, Spawnai);
-			Spawnai->SetMyAIID(aidata.AiID);
-			
-		}
-	}
-
-	FDamagePacket Dmgdata;
-	while (ClientThread->DmgQueue->Dequeue(Dmgdata))
-	{		
-		//if (Dmgdata.CharacterId != MyOwner) // ← 여기서 체크
-		//	continue;
-
-		AMyCharacter* myCharacter = Cast<AMyCharacter>(LocalPlayer);
-		
-		UE_LOG(LogTemp, Warning,
-			TEXT("서버로부터 데미지를 받음! CharacterId=%d"),
-			Dmgdata.CharacterId  // int			
-		);
-
-		UGameplayStatics::ApplyDamage(LocalPlayer, Dmgdata.Damage, nullptr, nullptr, UDamageType::StaticClass());
-		if (Dmgdata.Effect == EPlayerEffect::Red) {
-			myCharacter->HitPostProcessComp->TriggerHitEffect(1.0f);
-		}
-		else if (Dmgdata.Effect == EPlayerEffect::White) {
-			myCharacter->HitPostProcessComp->TriggerWhiteEffect(1.0f);
-		}
-		else {
-			myCharacter->HitPostProcessComp->TriggerZoneEffect(1.0f);
-		}
-	}
-
-	FDeathPacket DeathData;
-	while (ClientThread->DeathQueue->Dequeue(DeathData))
-	{
-		
-		AMyCharacter* myCharacter = Cast<AMyCharacter>(LocalPlayer);
-
-		FString VictimName = FString(ANSI_TO_TCHAR(DeathData.Name));
-		FString KillerName = FString(ANSI_TO_TCHAR(DeathData.CausedName));
-
-		UWorld* World = GetGameInstance()->GetWorld();
-		if (!World) return;
-
-		ACustomPlayerController* PC =
-			Cast<ACustomPlayerController>(UGameplayStatics::GetPlayerController(World, 0));
-
-		if (!PC) return;
-
-		UkillAccountWidget* Widget = PC->GetDeathWidget();
-		if (Widget)
-		{
-			Widget->UpdateDeathUI(KillerName, VictimName);
-		}
-	}
-
-	FConnectionPacket ConnectPacket;
-	while (ClientThread->ConnectQueue->Dequeue(ConnectPacket))
-	{
-		UE_LOG(LogTemp, Warning,
-			TEXT("ConnectPacket 안입니다."));
-
-		if (MyOwner == -1) {
-			MyOwner = ConnectPacket.order;
-		}
-		else {
-			for (ALoadingEnemy2* Player : StartPlayers)//?
-			{
-				if (Player->getMyOrder() == ConnectPacket.order) {
-					Player->MoveEnemy();
-				}
-			}
-		}
-	}
-	FItemPacket ItemPacket;
-	while (ClientThread->ItemSpawnQueue->Dequeue(ItemPacket))
-	{
-		UE_LOG(LogTemp, Warning,
-			TEXT("ItemPacket 안입니다."));
-		UItemManagerSubsystem* Manager =
-			GetGameInstance()->GetSubsystem<UItemManagerSubsystem>();
-		if (ItemPacket.ShouldRemove) {//서버에서 제거 >> 클라에서는 스폰
-			FVector SpawnLocation = FVector(ItemPacket.X, ItemPacket.Y, ItemPacket.Z);			
-			AWeaponActor* Item = Manager->GetItem(ItemPacket.ItemSpawnID);
-			Item->SetActorLocation(SpawnLocation);
-		}
-		else {
-			AWeaponActor* Item = Manager->GetItem(ItemPacket.ItemSpawnID);
-			FVector TargetLocation(100.f, 200.f, 300.f);
-			Item->SetActorLocation(TargetLocation);
-		}
-		/*
-		if (MyOwner == ItemPacket.OwnerId) {
-			PlayerLocation = MyCharacter->GetActorLocation();
-			Forward = MyCharacter->GetActorRotation().Vector();
-		}
-		else {
-			for (auto& Pair : SpawnAis)//?
-			{
-				AAIEnemy* Enemy = Pair.Value;
-				if (Player->getMyOrder() == ItemPacket.OwnerId) {
-					PlayerLocation = Player->GetActorLocation();
-					Forward = Player->GetActorRotation().Vector();
-				}
-			}
-		}*/
-	}
-	//UE_LOG(LogTemp, Warning,
-	//	TEXT("spawnActor 마지막입니다."));
+void UMyServer::ProcessPacket()
+{		
+	PorcessCharacterPacket();
+	ProcessSpawnAIPacket();
+	ProcessDamagePacket();
+	ProcessDeathPacket();
+	ProcessConnectionPacket();
+	ProcessItemPacket();
+	ProcessVehiclePacket();
 }
 
 void UMyServer::SetBulletClass(TSubclassOf<ABullet> blueprint)
@@ -576,128 +354,7 @@ void UMyServer::SetRocalPlayer(AActor* actor)
 	LocalPlayer = actor;
 }
 
-void UMyServer::ProcessBulletPacket()
-{
-	FServerBullet Position;
-	while (ClientThread->BulletQueue->Dequeue(Position)) {
-		//Position = bulletPacket;
 
-		if (Usedbullet.Find(Position.BulletId)) {//좀비 총알제거
-			UE_LOG(LogTemp, Warning,
-				TEXT("conintue")
-			);
-			return;
-		}
-
-		FVector Pos = FVector(Position.X, Position.Y, Position.Z);
-
-		if (!SpawnItems.Contains(Position.BulletId) && BulletClass)
-		{
-
-
-			FTransform SpawnTransform;
-			SpawnTransform.SetLocation(Pos);
-
-			FActorSpawnParameters SpawnParams;//스폰할 액터의 옵션 지정
-			//SpawnParams.Owner = this;//소유자를 캐릭터로
-			//SpawnParams.Instigator = GetInstigator();//이 무기를 스폰한 주체가 누군지		
-			SpawnParams.SpawnCollisionHandlingOverride =
-				ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-			ABullet* SpawnItem = GetWorld()->SpawnActor<ABullet>(BulletClass, SpawnTransform, SpawnParams);
-			SpawnItems.Add(Position.BulletId, SpawnItem);
-
-			SpawnItem->SetBulletId(Position.BulletId);
-
-			SpawnItem->OnBulletHit.BindUObject(
-				this,
-				&UMyServer::OnBulletHit
-			);
-
-		}
-		else {
-			//이동로직
-			// 충돌 무시하고 즉시 이동			
-			SpawnItems[Position.BulletId]->SetActorLocation(
-				Pos,
-				true,   // Sweep 
-				nullptr,
-				ETeleportType::TeleportPhysics
-			);
-
-		}
-	}
-}
-
-void UMyServer::PorcessCharacterPacket()
-{
-	FCharacterPacket data;
-	while (ClientThread->CharacterQueue->Dequeue(data)) {
-		//data = characterPacket;
-
-		FVector Pos2 = FVector(data.X, data.Y, data.Z);
-		FVector Dir2 = FVector(data.DirX, data.DirY, data.DirZ);
-
-		UE_LOG(LogTemp, Warning,
-			TEXT("EnemyPos => X: %.3f Y: %.3f Z: %.3f  Dirx : %f Diry : %f DirZ : %f DeltaTime: %.6f id = %d"),
-			data.X,
-			data.Y,
-			data.Z,
-			data.DirX,
-			data.DirY,
-			data.DirZ,
-			data.Sendtime,
-			data.CharacterId
-		);
-
-		
-
-
-		if (!SpawnEnemys.Contains(data.CharacterId) && EnermyClass)
-		{
-
-			UE_LOG(LogTemp, Warning,
-				TEXT("insidethe enemy spawn id = %d"), data.CharacterId
-			);
-
-			FTransform SpawnTransform;
-			SpawnTransform.SetLocation(Pos2);
-			//SpawnTransform.SetRotation(Weapon->GetGunFoward().ToOrientationQuat());
-
-			FActorSpawnParameters SpawnParams;//스폰할 액터의 옵션 지정
-			//SpawnParams.Owner = this;//소유자를 캐릭터로
-			//SpawnParams.Instigator = GetInstigator();//이 무기를 스폰한 주체가 누군지		
-			SpawnParams.SpawnCollisionHandlingOverride =
-				ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-			AMyEnemy* SpawnEnemy = GetWorld()->SpawnActor<AMyEnemy>(EnermyClass, SpawnTransform, SpawnParams);
-			SpawnEnemy->SetActorEnableCollision(false);
-
-			SpawnEnemys.Add(data.CharacterId, SpawnEnemy);
-
-			//SpawnEnemy->SetSPD(data.Speed, Pos2, Dir2, data.IsJump, data.IsFire, data.IsDeath, data.IsHeal);
-			//MyOwner = data.CharacterId; 3-21
-			FEnemyState enemyData = { data.Speed, Pos2, Dir2, data.IsJump, data.IsFire, data.IsDeath, data.IsHeal , data.IsHaveGun };
-			SpawnEnemy->SetSPD(enemyData);
-
-		}
-		else {
-			//이동로직
-			// 충돌 무시하고 즉시 이동
-			UE_LOG(LogTemp, Warning,
-				TEXT("moveSpawnenemy")
-			);
-
-			AMyEnemy* Enemy = SpawnEnemys[data.CharacterId];
-			Enemy->SetActorLocation(Pos2);
-			FRotator LookRot = Dir2.Rotation();
-			//Enemy->SetActorRotation(LookRot);
-			UE_LOG(LogTemp, Warning, TEXT("Dir2: %s"), *Dir2.ToString());
-			Enemy->SetActorRotation(LookRot);
-			Enemy->GetCharacterMovement()->Velocity = Dir2 * data.Speed;
-			FEnemyState enemyData = { data.Speed, Pos2, Dir2, data.IsJump, data.IsFire, data.IsDeath, data.IsHeal , data.IsHaveGun };
-			Enemy->SetSPD(enemyData);
-		}
-	}
-}
 
 void UMyServer::SetBulletPacket(FServerBullet resentPacket)
 {
@@ -723,16 +380,60 @@ void UMyServer::SetGrenadeClass(TSubclassOf<AMyGrenade> blueprint)
 	GrenadeClass = blueprint;
 }
 
+TSubclassOf<AMyGrenade> UMyServer::GetGrenadeClass()
+{
+	return GrenadeClass;
+}
+
+TSubclassOf<AActor> UMyServer::GetRealActiveClassByID(int32 TargetID)
+{
+	if (!ItemTable)
+		return nullptr;
+
+	static const FString Context(TEXT("Find Item"));
+
+	TArray<FItemStaticData*> Rows;
+	ItemTable->GetAllRows(Context, Rows);
+
+	for (FItemStaticData* Row : Rows)
+	{
+		if (Row && Row->ItemID == TargetID)
+		{
+			return Row->RealActiveActorClass;
+		}
+	}
+
+	return nullptr;
+}
+
 void UMyServer::SpawnGrenade()
 {
 	UE_LOG(LogTemp, Warning, TEXT("수류탄 생성단계"));
 	FGrenadePacket data;
 	while (ClientThread->GrenadeQueue->Dequeue(data))
 	{
-		if (!SpawnGrenades.Contains(data.GrenadeId) && GrenadeClass)
-		{
+		UE_LOG(LogTemp, Warning,
+			TEXT("큐 데이터 수신: ID=%d Pos=(%.1f %.1f %.1f) Dir=(%.1f %.1f %.1f) Power=%.1f"),
+			data.GrenadeId,
+			data.X, data.Y, data.Z,
+			data.DirX, data.DirY, data.DirZ,
+			data.Power
+		);
 
-			
+		if (!ItemTable)
+		{
+			UE_LOG(LogTemp, Error, TEXT("ItemTable 없음!"));
+			return;
+		}
+
+		if (data.GrenadeId == 0)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("GrenadeId = 0"));
+			continue;
+		}
+		if (ItemTable && data.GrenadeId!=0)
+		{			
+			TSubclassOf <AActor> RealGrenadeClass = GetRealActiveClassByID(data.GrenadeId);
 			FVector Pos2 = FVector(data.X, data.Y, data.Z);
 			FVector Dir2 = FVector(data.DirX, data.DirY, data.DirZ);
 			FTransform SpawnTransform;
@@ -741,10 +442,11 @@ void UMyServer::SpawnGrenade()
 			FActorSpawnParameters SpawnParams;//스폰할 액터의 옵션 지정					
 			SpawnParams.SpawnCollisionHandlingOverride =
 				ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-			AMyGrenade* SpawnGrenade = GetWorld()->SpawnActor<AMyGrenade>(GrenadeClass, SpawnTransform, SpawnParams);
+			AMyGrenade* SpawnGrenade = GetWorld()->SpawnActor<AMyGrenade>(RealGrenadeClass, SpawnTransform, SpawnParams);
+			SpawnGrenade->SetOwnerID(data.CharacterId);
 			//SpawnEnemy->SetActorEnableCollision(false);
-
-			SpawnGrenades.Add(data.GrenadeId, SpawnGrenade);
+			
+			//SpawnGrenades.Add(data.GrenadeId, SpawnGrenade);5-23  GrenadeClass도 정리 요망
 
 			SpawnGrenade->Throw(Dir2, data.Power);
 			UE_LOG(LogTemp, Warning, TEXT("수류탄 생성완료"));
@@ -760,34 +462,35 @@ void UMyServer::SpawnBullet(FServerBullet bullet)
 	FServerBullet data = bullet;
 	
 	// ❗ 한 개만 처리하도록 변경
-	if (ClientThread->BulletQueue->Dequeue(data))
-	{
+	//if (ClientThread->BulletQueue->Dequeue(data))
+	//{
 		if (BulletClass)
 		{
 			FVector Pos2 = FVector(data.X, data.Y, data.Z);
 			FVector Dir2 = FVector(data.DirX, data.DirY, data.DirZ);
 			FTransform SpawnTransform;
 			SpawnTransform.SetLocation(Pos2);
+			SpawnTransform.SetRotation(Dir2.Rotation().Quaternion()
+			);
 
 			FActorSpawnParameters SpawnParams;//스폰할 액터의 옵션 지정					
 			SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 			
-			/*
-			if (data.CharacterId == MyOwner) {
-				SpawnParams.Owner = MyCharacter;
-			}*/		
-
-			ABullet* SpawnBullet = GetWorld()->SpawnActor<ABullet>(BulletClass, SpawnTransform, SpawnParams);
 			
-			SpawnBullet->SetBulletOwner(data.CharacterId);
+			//ABullet* SpawnBullet = GetWorld()->SpawnActor<ABullet>(BulletClass, SpawnTransform, SpawnParams);
 			
 
-			SpawnBullet->Throw(Dir2, 3000);
-			//UE_LOG(LogTemp, Warning, TEXT("총알 생성완료"));
+			ABullet* SpawnBullet = GetWorld()->SpawnActor<ABullet>(BulletClass, Pos2, Dir2.Rotation(), SpawnParams);
+
+			SpawnBullet->SetOwnerID(data.CharacterId);
+			
+
+			SpawnBullet->Throw(Dir2, 100);
+			UE_LOG(LogTemp, Warning, TEXT("패킷받아서 총알 생성완료"));
 		}
-	}
+	//}
 
-	UE_LOG(LogTemp, Warning, TEXT("총알 생성완료"));
+	
 }
 
 void UMyServer::SpawnMelee()
@@ -832,12 +535,13 @@ void UMyServer::SpawnMelee()
 		{
 			for (auto& Result : Overlaps)
 			{
-				AActor* HitActor = Result.GetActor();
-
-				if (HitActor)
+				//AActor* HitActor = Result.GetActor();
+				AMyCharacter* Victim = Cast<AMyCharacter>(Result.GetActor());
+				if (Victim)
 				{
+					Victim->CurrentHitMeCharacterID = data.CharacterId;
 					UGameplayStatics::ApplyDamage(
-						HitActor,
+						Victim,
 						10.f,      // 데미지
 						nullptr,
 						nullptr,
@@ -850,67 +554,6 @@ void UMyServer::SpawnMelee()
 	}
 }
 
-
-
-
-
-//이건 사용안함
-void UMyServer::OnBulletHit(int32 BulletId, int32 CharacterId)
-{
-	UE_LOG(LogTemp, Warning, TEXT("이거쓰는데요?"));
-	SOCKET Sock = reinterpret_cast<SOCKET>(SocketHandle);
-	FServerBullet bullet;	
-	bullet.Header.Type = (int)EPacketType::Bullet;
-	bullet.Header.Size = sizeof(FServerBullet);
-	if ((BulletId - 1) < 0) {
-		return;
-	}
-	else {
-		bullet.BulletId = BulletId-1;
-	}
-	bullet.CharacterId = CharacterId;
-	bullet.X = 100.f;//의미없는 값
-	bullet.Y = 200.f;
-	bullet.Z = 300.f;
-	bullet.DirX = 1.f;
-	bullet.DirY = 0.f;
-	bullet.DirZ = 0.f;
-	bullet.Speed = 1200.f;
-	bullet.Sendtime = FPlatformTime::Seconds();//의미없는값 여기까지
-	bullet.flag = true;
-	// send 함수 사용 예시
-
-	SendAll((char*)&bullet, sizeof(FServerBullet));
-	/*
-	int nSendLen = send(Sock, (char*)&bullet, sizeof(FServerBullet), 0);
-
-
-	if (nSendLen == SOCKET_ERROR)
-	{
-		int err = WSAGetLastError();
-		UE_LOG(LogTemp, Error,
-			TEXT("[Pawn:%s] send() failed! OnBulletHit erase WSAGetLastError: %d"),
-			*GetName(), err);
-	}
-	else
-	{
-		UE_LOG(LogTemp, Log,
-			TEXT("[Pawn:%s] send() succeeded! erase Bytes sent: %d / Expected: %d"),
-			*GetName(), nSendLen, sizeof(FServerBullet));
-	}
-	*/
-
-	Usedbullet.Add(BulletId, true);
-	Usedbullet2.Add(BulletId, true);
-	/*게임쓰레드에서 지우자
-	if (ABullet* Bullet = SpawnItems.FindRef(BulletId))
-	{
-		Bullet->Destroy();
-		SpawnItems.Remove(BulletId);
-	}*/
-
-	
-}
 
 void UMyServer::StartCountdownByPacket(int countdownamount)
 {
@@ -937,6 +580,21 @@ void UMyServer::StartCountdownByPacket(int countdownamount)
 		true
 	);
 
+}
+
+void UMyServer::SetInformationText(FString message)
+{
+	UWorld* World = GetGameInstance()->GetWorld();
+	if (!World) return;
+	ACustomPlayerController* PC =
+		Cast<ACustomPlayerController>(UGameplayStatics::GetPlayerController(World, 0));
+	if (!PC) return;
+
+	UInformationWidget* Widget = PC->GetInformationWidget();
+	if (Widget)
+	{
+		Widget->UpdateInformationUI(message);
+	}
 }
 
 
@@ -1009,6 +667,14 @@ void UMyServer::UpdateCountdownUI()
 	
 }
 
+void UMyServer::SetMyCharacterId()
+{
+	AMyCharacter* Player = Cast<AMyCharacter>(LocalPlayer);
+	if (Player) {
+		Player->SetMyId(MyOwner);
+	}
+}
+
 void UMyServer::SetBombClass(TSubclassOf<ABomb> blueprint)
 {
 	BombClass = blueprint;
@@ -1024,7 +690,9 @@ void UMyServer::StartRedzone(FVector Center)
 		FColor::Cyan,
 		FString::Printf(TEXT("레드존")));
 
-	RedzoneCenter = Center;
+	RedzoneCenter = Center;	
+	VisualRedZone = GetWorld()->SpawnActor<AActor>(RedzoneClass, RedzoneCenter, FRotator::ZeroRotator);	
+
 	GetWorld()->GetTimerManager().SetTimer(
 		timerHandle,
 		this,
@@ -1039,6 +707,7 @@ void UMyServer::EndRedzone()
 	if (!GetWorld()) return;
 
 	GetWorld()->GetTimerManager().ClearTimer(timerHandle);
+	VisualRedZone->Destroy();
 }
 
 void UMyServer::SpawnBomb()
@@ -1049,7 +718,7 @@ void UMyServer::SpawnBomb()
 	FVector targetPos = FVector(
 		RedzoneCenter.X + randomPoint.X,
 		RedzoneCenter.Y + randomPoint.Y,
-		RedzoneCenter.Z + 2000.0f   // 위에서 떨어지게
+		RedzoneCenter.Z + 5000.0f   // 위에서 떨어지게
 	);
 
 	GetWorld()->SpawnActor<ABomb>(BombClass, targetPos, FRotator::ZeroRotator);
@@ -1083,5 +752,290 @@ void UMyServer::StartBlueHole(FVector Center)
 	);
 
 	BlueHole = GetWorld()->SpawnActor<ABlueHole>(BlueHoleClass, targetPos, FRotator::ZeroRotator);
+	BlueHole->SetOverlapActive(true);
 	
+}
+
+
+
+void UMyServer::PorcessCharacterPacket()
+{
+	FCharacterPacket data;
+	int ProcessedCount = 0;
+	while (ProcessedCount < MaxCharacterPacketsPerTick &&
+		ClientThread->CharacterQueue->Dequeue(data))
+	{
+
+		ProcessedCount++;
+
+		FVector Pos2 = FVector(data.X, data.Y, data.Z);
+		FVector Dir2 = FVector(data.DirX, data.DirY, data.DirZ);
+
+		//ai
+		if (data.CharacterId < -90) {
+			//이동로직
+			// 충돌 무시하고 즉시 이동
+			UE_LOG(LogTemp, Warning,
+				TEXT("aiPos => X: %.3f Y: %.3f Z: %.3f  DeltaTime: %.6f id = %d"),
+				data.DirX,
+				data.DirY,
+				data.DirZ,
+				data.Sendtime,
+				data.CharacterId
+			);
+
+			if (SpawnAis.Contains(data.CharacterId)) {
+				AAIEnemy* ai = SpawnAis[data.CharacterId];
+				ai->BB->SetValueAsVector(
+					TEXT("TargetLocation"),
+					Dir2
+				);//?
+			}
+			else {
+				continue;
+			}
+		}
+		else {
+
+			if (!SpawnEnemys.Contains(data.CharacterId) && EnermyClass)
+			{
+
+				UE_LOG(LogTemp, Warning,
+					TEXT("insidethe enemy spawn id = %d"), data.CharacterId
+				);
+
+				FTransform SpawnTransform;
+				SpawnTransform.SetLocation(Pos2);
+
+				FActorSpawnParameters SpawnParams;//스폰할 액터의 옵션 지정
+				//SpawnParams.Owner = this;//소유자를 캐릭터로
+				//SpawnParams.Instigator = GetInstigator();//이 무기를 스폰한 주체가 누군지	
+				SpawnParams.SpawnCollisionHandlingOverride =
+					ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+				AMyEnemy* SpawnEnemy = GetWorld()->SpawnActor<AMyEnemy>(EnermyClass, SpawnTransform, SpawnParams);
+				//SpawnEnemy->SetActorEnableCollision(false);2-12
+				SpawnEnemy->SetIgnoreCharacterId(MyOwner);
+				SpawnEnemys.Add(data.CharacterId, SpawnEnemy);
+
+				FEnemyState enemyData = { data.Speed, Pos2, Dir2, data.IsJump, data.IsFire, data.IsDeath, data.IsHeal , data.WeaponType, data.AimActive };
+				SpawnEnemy->SetSPD(enemyData);
+				//MyOwner = data.CharacterId;
+				//3-21 적이 MyOwner이군요...
+
+			}
+			else {
+				//이동로직
+				// 충돌 무시하고 즉시 이동
+				/*
+				UE_LOG(LogTemp, Warning,
+					TEXT("moveSpawnenemy")
+				);
+				*/
+				AMyEnemy* Enemy = SpawnEnemys[data.CharacterId];
+				Enemy->SetActorLocation(Pos2);
+				FRotator LookRot = Dir2.Rotation();
+				Enemy->SetActorRotation(LookRot);
+				Enemy->GetCharacterMovement()->Velocity = Dir2 * data.Speed;
+				FEnemyState enemyData = { data.Speed, Pos2, Dir2, data.IsJump, data.IsFire, data.IsDeath, data.IsHeal , data.WeaponType, data.AimActive };
+				Enemy->SetSPD(enemyData);
+			}
+		}
+	}
+}
+
+void UMyServer::ProcessSpawnAIPacket()
+{
+	//ai
+	FSpawnAIPacket aidata;
+	while (ClientThread->AISpawnQueue->Dequeue(aidata))
+	{
+		FVector Pos2 = FVector(aidata.X, aidata.Y, aidata.Z);
+
+		UE_LOG(LogTemp, Warning,
+			TEXT("Ai respon => X: %.3f Y: %.3f Z: %.3f id = %d"),
+			aidata.X,
+			aidata.Y,
+			aidata.Z,
+			aidata.AiID
+		);
+
+		if (!SpawnAis.Contains(aidata.AiID) && AiClass)
+		{
+
+			UE_LOG(LogTemp, Warning,
+				TEXT("insidethe ai spawn id = %d"), aidata.AiID
+			);
+
+			FTransform SpawnTransform;
+			SpawnTransform.SetLocation(Pos2);
+
+			FActorSpawnParameters SpawnParams;//스폰할 액터의 옵션 지정					
+			SpawnParams.SpawnCollisionHandlingOverride =
+				ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			AAIEnemy* Spawnai = GetWorld()->SpawnActor<AAIEnemy>(AiClass, SpawnTransform, SpawnParams);
+			//Spawnai->SetActorEnableCollision(false);
+
+			SpawnAis.Add(aidata.AiID, Spawnai);
+			Spawnai->SetMyAIID(aidata.AiID);
+
+		}
+	}
+}
+
+void UMyServer::ProcessDamagePacket()
+{
+	FDamagePacket Dmgdata;
+	while (ClientThread->DmgQueue->Dequeue(Dmgdata))
+	{
+		//if (Dmgdata.CharacterId != MyOwner) // ← 여기서 체크
+		//	continue;
+
+		AMyCharacter* myCharacter = Cast<AMyCharacter>(LocalPlayer);
+
+		UE_LOG(LogTemp, Warning,
+			TEXT("서버로부터 데미지를 받음! CharacterId=%d"),
+			Dmgdata.CharacterId  // int			
+		);
+
+		UGameplayStatics::ApplyDamage(LocalPlayer, Dmgdata.Damage, nullptr, nullptr, UDamageType::StaticClass());
+		if (Dmgdata.Effect == EPlayerEffect::Red) {
+			myCharacter->HitPostProcessComp->TriggerHitEffect(1.0f);
+		}
+		else if (Dmgdata.Effect == EPlayerEffect::White) {
+			myCharacter->HitPostProcessComp->TriggerWhiteEffect(1.0f);
+		}
+		else {
+			myCharacter->HitPostProcessComp->TriggerZoneEffect(1.0f);
+		}
+	}
+}
+
+void UMyServer::ProcessDeathPacket()
+{
+	FDeathPacket DeathData;
+	while (ClientThread->DeathQueue->Dequeue(DeathData))
+	{
+
+		AMyCharacter* myCharacter = Cast<AMyCharacter>(LocalPlayer);
+
+		FString VictimName = FString(ANSI_TO_TCHAR(DeathData.Name));
+		FString KillerName = FString(ANSI_TO_TCHAR(DeathData.CausedName));
+
+		UWorld* World = GetGameInstance()->GetWorld();
+		if (!World) return;
+
+		ACustomPlayerController* PC =
+			Cast<ACustomPlayerController>(UGameplayStatics::GetPlayerController(World, 0));
+
+		if (!PC) return;
+
+		UkillAccountWidget* Widget = PC->GetDeathWidget();
+		//UEndGameUIWidget* EndGameUI
+
+		if (Widget)
+		{
+			Widget->UpdateDeathUI(KillerName, VictimName);
+			Widget->KillerName = KillerName;
+			//PC->ShowEndGameUI();
+		}
+	}
+}
+
+void UMyServer::ProcessConnectionPacket()
+{
+	FConnectionPacket ConnectPacket;
+	while (ClientThread->ConnectQueue->Dequeue(ConnectPacket))
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("ConnectPacket 안입니다."));
+
+		if (MyOwner == -1) {
+			MyOwner = ConnectPacket.order;
+		}
+		else {
+			for (ALoadingEnemy2* Player : StartPlayers)//?
+			{
+				if (Player->getMyOrder() == ConnectPacket.order) {
+					Player->MoveEnemy();
+				}
+			}
+		}
+	}
+}
+
+void UMyServer::ProcessItemPacket()
+{
+	
+
+	FItemPacket ItemPacket;
+	while (ClientThread->ItemSpawnQueue->Dequeue(ItemPacket))
+	{
+		
+		UE_LOG(LogTemp, Warning,
+			TEXT("ItemPacket 안입니다."));
+		UItemManagerSubsystem* Manager =
+			GetGameInstance()->GetSubsystem<UItemManagerSubsystem>();
+
+		Manager->InitItems(GetWorld());
+
+
+		if (ItemPacket.ShouldRemove) {//서버에서 제거 >> 클라에서는 스폰
+			AWeaponActor* Item = Manager->GetItem(ItemPacket.ItemSpawnID);
+			Item->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+			FVector SpawnLocation = FVector(ItemPacket.X, ItemPacket.Y, ItemPacket.Z);
+			
+			Item->SetActorLocation(SpawnLocation);
+		}
+		else {
+			
+			AWeaponActor* Itemm = Manager->GetItem(ItemPacket.ItemSpawnID);
+			//FVector TargetLocation(100.f, 200.f, 300.f);//526
+			//Itemm->SetActorLocation(TargetLocation);526
+			
+			UE_LOG(LogTemp, Warning, TEXT("enemyattachitem"));
+
+			SpawnEnemys[ItemPacket.OwnerId]->AttachWeaponActor(Itemm);
+		}
+	}
+}
+
+void UMyServer::ProcessVehiclePacket()
+{
+	FVehiclePacket data;
+	int ProcessedCount = 0;
+	while (ProcessedCount < MaxVehiclePacketsPerTick &&
+		ClientThread->VehicleQueue->Dequeue(data))
+	{
+		ProcessedCount++;
+
+		FVector Pos2 = FVector(data.X, data.Y, data.Z);
+		FVector Dir2 = FVector(data.DirX, data.DirY, data.DirZ);
+
+		UE_LOG(LogTemp, Warning,
+			TEXT("[VehiclePacket] carId=%d ownerId=%d Pos=(%.2f, %.2f, %.2f) Dir=(%.2f, %.2f, %.2f) HasChar=%s"),
+			data.carId,
+			data.ownerId,
+			data.X,
+			data.Y,
+			data.Z,
+			data.DirX,
+			data.DirY,
+			data.DirZ,
+			data.IsHaveCharacter ? TEXT("true") : TEXT("false")
+		);
+
+		if (APawnVehicle** CarPtr =	SpawnVehicles.Find(data.carId))
+		{					
+			(*CarPtr)->SetActorLocation(Pos2);			
+			FRotator Rot = Dir2.Rotation();
+			(*CarPtr)->SetActorRotation(Rot);
+			//SpawnEnemys[data.ownerId]->ActorStateInWorldByVehicle(true);//델리게이트로 하면 좋을듯 숨김
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error,
+				TEXT("Vehicle not found carId=%d"),
+				data.carId);
+		}
+	}
 }

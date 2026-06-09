@@ -9,9 +9,31 @@
 #include "Framework/Application/SlateApplication.h"
 #include "PawnManager.h"
 #include "killAccountWidget.h"
+#include "MinimapCaptureActor.h"
+#include <Kismet/KismetRenderingLibrary.h>
+#include "MinimapCaptureActor.h"
+#include "EndGameUIWidget.h"
+
+
 UkillAccountWidget* ACustomPlayerController::GetDeathWidget()
 {
-    return DeathLogWidget;;
+    return DeathLogWidget;
+}
+UInformationWidget* ACustomPlayerController::GetInformationWidget()
+{
+    return InformationWidget;
+}
+UEndGameUIWidget* ACustomPlayerController::GetUEndGameUIWidget()
+{
+    return EndGameWidget;
+}
+UMinimap* ACustomPlayerController::GetMiniMapWidget()
+{
+    return MiniMapWidget;
+}
+UGlobalMap* ACustomPlayerController::GetGlobalMapWidget()
+{
+    return GlobalMapWidget;
 }
 void ACustomPlayerController::BeginPlay()
 {
@@ -22,7 +44,7 @@ void ACustomPlayerController::BeginPlay()
     if (!IsLocalController())
         return;
     
-
+    //지울요망
     if (ConfigData)
     {
         UMyServer* Server = GetGameInstance()->GetSubsystem<UMyServer>();
@@ -67,12 +89,41 @@ void ACustomPlayerController::BeginPlay()
             DeathLogWidgetClass
         );
     }
-
     if (DeathLogWidget)
     {
         DeathLogWidget->AddToViewport();
         DeathLogWidget->SetVisibility(ESlateVisibility::HitTestInvisible);
     }
+
+
+
+    if (EndGameWidgetClass)
+    {
+        EndGameWidget = CreateWidget<UEndGameUIWidget>(
+            this,
+            EndGameWidgetClass
+        );
+    }
+    if (EndGameWidget)
+    {
+        EndGameWidget->AddToViewport();
+        EndGameWidget->SetVisibility(ESlateVisibility::Hidden);
+    }
+
+
+    if (InformationWidgetClass)
+    {
+        InformationWidget = CreateWidget<UInformationWidget>(
+            this,
+            InformationWidgetClass
+        );
+    }
+    if (InformationWidget)
+    {
+        InformationWidget->AddToViewport();
+        InformationWidget->SetVisibility(ESlateVisibility::HitTestInvisible);
+    }
+
 
     // 처음에는 스타트 메뉴만 표시
     isWatingRoom = false;
@@ -96,10 +147,34 @@ void ACustomPlayerController::BeginPlay()
 
     if (GlobalMapWidget)
     {
-        GlobalMapWidget->AddToViewport(); 
+        GlobalMapWidget->AddToViewport();
         GlobalMapWidget->SetVisibility(ESlateVisibility::Hidden);
-    }
 
+        // 1. 로컬 RT 생성
+        LocalRT =
+            UKismetRenderingLibrary::CreateRenderTarget2D(
+                this,
+                1024,
+                1024);
+
+        // 2. 로컬 CaptureActor 생성
+        FVector MapLocation(-43064.267979, -3694.705605, 136314.579742);
+
+        FRotator MapRotation(-90.f, 0.f, 0.f);
+
+        LocalCaptureActor =
+            GetWorld()->SpawnActor<AMinimapCaptureActor>(
+                AMinimapCaptureActor::StaticClass(),
+                MapLocation,
+                MapRotation);
+
+        // 3. RT 연결
+        LocalCaptureActor->SetRenderTarget(LocalRT);
+
+        // 4. Widget 연결
+        GlobalMapWidget->SetRenderTarget(LocalRT);
+    }
+    //---
 
     if (LoginWidgetClass)
     {
@@ -125,6 +200,7 @@ void ACustomPlayerController::SetTextTime(int time)
         ShowWaitingRoom();
         HiddenStartMenu();
         ShowMiniMap();
+        ShowInformationText();
         SpawnAndPossessMyCharacter();
     }
 
@@ -260,7 +336,7 @@ void ACustomPlayerController::UpdateGlobalMap(bool state)
 
 void ACustomPlayerController::ShowWaitingRoom()
 {
-    WatingRoomWidget->SetVisibility(ESlateVisibility::Visible);
+    WatingRoomWidget->SetVisibility(ESlateVisibility::Visible);//
 }
 
 void ACustomPlayerController::HiddenWaitingRoom()
@@ -279,10 +355,30 @@ void ACustomPlayerController::HiddenStartMenu()
 }
 void ACustomPlayerController::ShowMiniMap()
 {
-    MiniMapWidget->SetVisibility(ESlateVisibility::Visible);
+    MiniMapWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);//
 }
 
 void ACustomPlayerController::HiddendMiniMap()
 {
     MiniMapWidget->SetVisibility(ESlateVisibility::Hidden);
+}
+
+void ACustomPlayerController::ShowInformationText()
+{
+    InformationWidget->SetVisibility(ESlateVisibility::Visible);//
+}
+
+void ACustomPlayerController::HiddenInformationText()
+{
+    InformationWidget->SetVisibility(ESlateVisibility::Hidden);
+}
+
+void ACustomPlayerController::ShowEndGameUI()
+{
+    EndGameWidget->SetVisibility(ESlateVisibility::Visible);
+}
+
+void ACustomPlayerController::HiddenEndGameUI()
+{
+    EndGameWidget->SetVisibility(ESlateVisibility::Hidden);
 }

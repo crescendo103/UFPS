@@ -42,9 +42,8 @@ bool UWeaponBoxPlayer::NativeOnDrop(const FGeometry& InGeometry, const FDragDrop
     if (OwnerInventory->Owner)
     {
         OwnerInventory->Owner->WeaponAttach(ItemActor, "RightHandPinky4Socket");
-
-        OwnerInventory->Owner->CurrentWeapon =
-            static_cast<EWeaponType>(DragOp->ItemID);
+        //OwnerInventory->Owner->setCurrentWeapon(EWeaponType::Rifle);
+        OwnerInventory->Owner->setCurrentWeapon(static_cast<EWeaponType>(DragOp->ItemID));
     }
 
     // 🔹 PlayerWeaponData 저장

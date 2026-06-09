@@ -46,7 +46,8 @@ AMyGrenade::AMyGrenade()
 	
 	StaticGrenadeMesh->SetNotifyRigidBodyCollision(true);
 	
-
+	EffectComponent = CreateDefaultSubobject<UItemEffectComponent>(TEXT("EffectComponent"));
+	EffectComponent->SetupAttachment(RootComponent);
 }
 
 // Called when the game starts or when spawned
@@ -72,9 +73,6 @@ void AMyGrenade::BeginPlay()
 void AMyGrenade::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	
-	
-
 }
 
 void AMyGrenade::ThrowGrenade()
@@ -96,32 +94,80 @@ void AMyGrenade::ThrowWheelVal(float val)
 }
 
 void AMyGrenade::Explode()
-{
-	UE_LOG(LogTemp, Warning, TEXT("wrong Explode"));
+{	
+	// 범위 데미지
+	UGameplayStatics::ApplyRadialDamage(
+		GetWorld(),
+		Damage,                 // 데미지
+		GetActorLocation(),
+		ExplosionRadius,
+		UDamageType::StaticClass(),
+		TArray<AActor*>(),     // ignore actors
+		this,
+		GetInstigatorController(),
+		false
+	);
+
+
+	// 디버그용 범위 표시 (10초간, 두께 2)
+	DrawDebugSphere(
+		GetWorld(),
+		GetActorLocation(),
+		ExplosionRadius,
+		32,                   // 세그먼트 수
+		FColor::Red,
+		false,                // 지속 시간
+		10.f,                 // 살아있는 시간
+		0,
+		2.f                   // 선 두께
+	);
+
+	Destroy();
 }
 
-void AMyGrenade::ExplodeVoxel(FVector ExplosionCenter, float ExplosionRadius)
-{
-	UE_LOG(LogTemp, Warning, TEXT("wrong ExplodeVoxel"));
-}
 
+void AMyGrenade::SetOwnerID(int32 owner)
+{
+	Owner = owner;
+}
+int32 AMyGrenade::GetOwnerID()
+{
+	return Owner;
+}
 
 
 
 void AMyGrenade::Throw(const FVector& Direction, float Power)
 {
+	
+	UE_LOG(LogTemp, Warning, TEXT("Throw 시작"));
+
+	UE_LOG(LogTemp, Warning,
+		TEXT("this=%p"), this);
+
+	UE_LOG(LogTemp, Warning,
+		TEXT("StaticGrenadeMesh=%p"),
+		StaticGrenadeMesh);
+
 	FVector Velocity = Direction * Power;
 
-	//UStaticMeshComponent* Mesh = GetMesh();
-	///StaticGrenadeMesh->SetSimulatePhysics(true);
+	if (!StaticGrenadeMesh)
+	{
+		UE_LOG(LogTemp, Error,
+			TEXT("StaticGrenadeMesh NULL"));
 
-	// 속도 직접 설정
+		return;
+	}
+
+	if (EffectComponent) {
+		EffectComponent->PlayStartSound();
+	}
+
 	StaticGrenadeMesh->SetPhysicsLinearVelocity(Velocity);
 
-	// 또는 임펄스
-	// Mesh->AddImpulse(Velocity * Mesh->GetMass());
+	UE_LOG(LogTemp, Warning,
+		TEXT("속도 적용 완료"));
 
-	// 3초 후 폭발 예약
 	GetWorldTimerManager().SetTimer(
 		ExplosionTimerHandle,
 		this,
@@ -129,7 +175,6 @@ void AMyGrenade::Throw(const FVector& Direction, float Power)
 		3.0f,
 		false
 	);
-
 }
 
 
