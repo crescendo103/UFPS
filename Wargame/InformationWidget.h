@@ -20,7 +20,7 @@ class FPS_API UInformationWidget : public UUserWidget
 public:
 	void UpdateInformationUI(FString information);
 
-	//  UMG에서 BindWidget 체크해야 함
+		
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* InformaitonText;
 

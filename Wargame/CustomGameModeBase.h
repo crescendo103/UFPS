@@ -16,7 +16,11 @@ class FPS_API ACustomGameModeBase : public AGameModeBase
 	
 public:
 	ACustomGameModeBase();
+protected:
+	virtual void BeginPlay() override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Config")
 	class UGameConfigData* ConfigData;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Config")
+	class UGameConfigData2* ConfigData2;
 };

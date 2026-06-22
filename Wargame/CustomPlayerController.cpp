@@ -13,7 +13,7 @@
 #include <Kismet/KismetRenderingLibrary.h>
 #include "MinimapCaptureActor.h"
 #include "EndGameUIWidget.h"
-
+#include "RoomWidget.h"
 
 UkillAccountWidget* ACustomPlayerController::GetDeathWidget()
 {
@@ -188,6 +188,20 @@ void ACustomPlayerController::BeginPlay()
         LoginWidget->AddToViewport();
         LoginWidget->SetVisibility(ESlateVisibility::Visible);
     }
+
+    if (RoomWidgetClass)
+    {
+        RoomWidget = CreateWidget<URoomWidget>(
+            this,
+            RoomWidgetClass
+        );
+    }
+    if (RoomWidget)
+    {
+        RoomWidget->AddToViewport();
+        RoomWidget->SetVisibility(ESlateVisibility::Hidden);
+    }
+
 }
 
 
@@ -207,6 +221,7 @@ void ACustomPlayerController::SetTextTime(int time)
     // 🔹 5초 카운트 시작 → StartMenu
     if (time == 5 && !isWatingRoom)
     {
+        StartingMenuWidget->UpdateTitleText(true);
         ShowHiddenStartMenu();
         HiddenWaitingRoom();
     }
@@ -215,7 +230,9 @@ void ACustomPlayerController::SetTextTime(int time)
     {
 
         //두번째 카운트다운
-        if (isWatingRoom) {                        
+        if (isWatingRoom) {                
+            WatingRoomWidget->ClearInformationText();
+
             ULocalPlayer* LP = this->GetLocalPlayer();
             if (!LP) return;
 
@@ -238,6 +255,8 @@ void ACustomPlayerController::SetTextTime(int time)
             /*
             PM->SpawnHeli();//헬기 여기요
             */
+
+            return;
         }
         else {
             SpawnAndPossessMyCharacter();
@@ -353,6 +372,10 @@ void ACustomPlayerController::HiddenStartMenu()
 {
     StartingMenuWidget->SetVisibility(ESlateVisibility::Hidden);
 }
+void ACustomPlayerController::SetDisableStartButton()
+{
+    StartingMenuWidget->SetStartButtonDisabled();
+}
 void ACustomPlayerController::ShowMiniMap()
 {
     MiniMapWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);//
@@ -381,4 +404,14 @@ void ACustomPlayerController::ShowEndGameUI()
 void ACustomPlayerController::HiddenEndGameUI()
 {
     EndGameWidget->SetVisibility(ESlateVisibility::Hidden);
+}
+
+void ACustomPlayerController::ShowRoomUI()
+{
+    RoomWidget->SetVisibility(ESlateVisibility::Visible);
+}
+
+void ACustomPlayerController::HiddenRoomUI()
+{
+    RoomWidget->SetVisibility(ESlateVisibility::Hidden);
 }

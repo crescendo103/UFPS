@@ -49,6 +49,8 @@ public:
 	void MoveItem(FItemPacket packet);
 	void MoveBroadCast(FBrodcastMessage packet);
 	void MoveVehicle(FVehiclePacket packet);
+	void MoveRoomPacket(FRoomPacket packet);
+	void ProcessRoomPacket(FRoomPacket packet);
 
 	void Shotoccurred(FServerBullet bullet);
 	void SetThreadSocketHandle();//쓰레드 생성
@@ -134,6 +136,8 @@ public:
 private:
 	FTimerHandle CountdownTimer;
 
+	FRoomPacket empty;
+
 	void UpdateCountdownUI();
 
 public:
@@ -142,7 +146,7 @@ public:
 	ClientTrd* ClientThread;
 	FTimerHandle ServerTimer;
 	int32 MyOwner;
-	void SetMyCharacterId();
+	
 	bool IsSetMyOwner;
 	//bool IsSpawned;
 public:

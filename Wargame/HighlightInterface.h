@@ -1,29 +1,37 @@
 // Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
+#include "GameFramework/Actor.h"
+#include "Components/MeshComponent.h"
+#include "Engine/StreamableManager.h"
 #include "HighlightInterface.generated.h"
 
 // This class does not need to be modified.
 UINTERFACE(MinimalAPI)
 class UHighlightInterface : public UInterface
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 };
 
 /**
- * 
+ *
  */
 class FPS_API IHighlightInterface
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
-	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
-	void ItemOutlineOn();
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
-	void ItemOutlineOff();
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+    void ItemOutlineOn();
+    virtual void ItemOutlineOn_Implementation()
+    {        
+    }
+
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+    void ItemOutlineOff();
+    virtual void ItemOutlineOff_Implementation()
+    {
+    }
 };

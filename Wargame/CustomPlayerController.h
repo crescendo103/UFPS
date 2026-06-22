@@ -23,7 +23,7 @@ class UkillAccountWidget;
 class UGameConfigData;
 class AMinimapCaptureActor;
 class UEndGameUIWidget;
-
+class URoomWidget;
 UCLASS()
 class FPS_API ACustomPlayerController : public APlayerController
 {
@@ -80,6 +80,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UEndGameUIWidget> EndGameWidgetClass;//블루프린트 위젯 설계도
+	
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<URoomWidget> RoomWidgetClass;//블루프린트 위젯 설계도
 
 	UPROPERTY()
 	class UGlobalMap* GlobalMapWidget;
@@ -98,6 +101,9 @@ public:
 	UMinimap* MiniMapWidget;
 
 	UPROPERTY()
+	class URoomWidget* RoomWidget;
+
+	UPROPERTY()
 	UEndGameUIWidget* EndGameWidget;
 	UEndGameUIWidget* GetUEndGameUIWidget();
 
@@ -112,12 +118,15 @@ public:
 	void HiddenWaitingRoom();
 	void ShowHiddenStartMenu();
 	void HiddenStartMenu();
+	void SetDisableStartButton();
 	void ShowMiniMap();
 	void HiddendMiniMap();
 	void ShowInformationText();
 	void HiddenInformationText();
 	void ShowEndGameUI();
 	void HiddenEndGameUI();
+	void ShowRoomUI();
+	void HiddenRoomUI();
 	void SetTextTime(int time);
 	void SwitchWidget(bool startwidget, bool watingwidget);
 

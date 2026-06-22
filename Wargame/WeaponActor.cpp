@@ -45,38 +45,7 @@ AWeaponActor::AWeaponActor()
 // Called when the game starts or when spawned
 void AWeaponActor::BeginPlay()
 {
-	Super::BeginPlay();
-    if (!OverlayMaterial)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("OverlayMaterial is null"));
-        return;
-    }
-    if (!Mesh)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("weaponMesh is null"));
-        return;
-    }
-
-    // 1️⃣ Create Dynamic Material Instance
-    DynamicOverlay = UMaterialInstanceDynamic::Create(
-        OverlayMaterial,
-        this
-    );
-
-    if (!DynamicOverlay)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Failed to create DynamicOverlay"));
-        return;
-    }
-
-    // 2️⃣ Set Overlay Material (Mesh)
-    Mesh->SetOverlayMaterial(DynamicOverlay);
-
-    // 3️⃣ Set Scalar Parameter Value (Opacity = 0)
-    DynamicOverlay->SetScalarParameterValue(
-        TEXT("Opacity"),
-        0.0f
-    );
+	Super::BeginPlay();       
 }
 
 // Called every frame
@@ -101,36 +70,54 @@ void AWeaponActor::Tick(float DeltaTime)
 
 void AWeaponActor::ItemOutlineOn_Implementation()
 {
-    UE_LOG(LogTemp, Warning,
-        TEXT("ItemOutlineOn_Implementation"));
-    // 3️⃣ Set Scalar Parameter Value (Opacity = 0)
-    if (DynamicOverlay) {
-        DynamicOverlay->SetScalarParameterValue(
-            TEXT("Opacity"),
-            1.0f
-        );
+    // 1. 머티리얼 에셋 로드 (정확한 경로 확인 필수)
+    static const TCHAR* OutlineMaterialPath = TEXT("/Game/Mycontent/Material/MT_ItemHighlight.MT_ItemHighlight");
+    UMaterialInterface* OutlineMaterial = LoadObject<UMaterialInterface>(nullptr, OutlineMaterialPath);
 
-        UE_LOG(LogTemp, Warning,
-            TEXT("Opacity 1.0"));
+    if (!OutlineMaterial)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[WeaponActor] ItemOutlineOn: 머티리얼 로드 실패! 경로를 확인하세요: %s"), OutlineMaterialPath);
+        return;
     }
 
+    // 2. 이 액터가 가진 모든 메시 컴포넌트(SkeletalMesh, StaticMesh 등)를 가져옴
+    TArray<UMeshComponent*> MeshComponents;
+    GetComponents<UMeshComponent>(MeshComponents);
+
+    if (MeshComponents.Num() == 0)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[WeaponActor] ItemOutlineOn: %s 에서 메시 컴포넌트를 찾을 수 없습니다."), *GetName());
+        return;
+    }
+
+    // 성공 로그 (Warning으로 출력하여 확실히 보이게 설정)
+    UE_LOG(LogTemp, Warning, TEXT("[WeaponActor] ItemOutlineOn 호출됨! 대상: %s (메시 개수: %d)"), *GetName(), MeshComponents.Num());
+
+    // 3. 모든 메시 컴포넌트에 오버레이 머티리얼 적용
+    for (UMeshComponent* MeshComp : MeshComponents)
+    {
+        if (MeshComp)
+        {
+            MeshComp->SetOverlayMaterial(OutlineMaterial);
+        }
+    }
 }
 
 void AWeaponActor::ItemOutlineOff_Implementation()
 {
-    UE_LOG(LogTemp, Warning,
-        TEXT("ItemOutlineOff_Implementation"));
-    if (DynamicOverlay) {
-        // 3️⃣ Set Scalar Parameter Value (Opacity = 0)
-        DynamicOverlay->SetScalarParameterValue(
-            TEXT("Opacity"),
-            0.0f
-        );
+    TArray<UMeshComponent*> MeshComponents;
+    GetComponents<UMeshComponent>(MeshComponents);
 
-        UE_LOG(LogTemp, Warning,
-            TEXT("Opacity 0.0"));
+    UE_LOG(LogTemp, Warning, TEXT("[WeaponActor] ItemOutlineOff 호출됨! 대상: %s"), *GetName());
+
+    // 오버레이 머티리얼 제거 (nullptr 대입)
+    for (UMeshComponent* MeshComp : MeshComponents)
+    {
+        if (MeshComp)
+        {
+            MeshComp->SetOverlayMaterial(nullptr);
+        }
     }
-
 }
 
 void AWeaponActor::SpawnItem_Implementation(FVector playerPos)
@@ -156,9 +143,8 @@ void AWeaponActor::SpawnItem(FVector startPos, FVector startRot)
 {
     if (SpawnComponent)
     {
-        FVector startedPos = Mesh->GetSocketLocation(TEXT("SpawnPoint"));
-        //FVector startRot = Mesh->GetSocketRotation(TEXT("SpawnPoint")).Vector();
-        SpawnComponent->UseWeapon(Owner, startedPos, startRot);
+        FVector startedPos = Mesh->GetSocketLocation(TEXT("SpawnPoint"));//총구에서 안쏠듯  
+        SpawnComponent->UseWeapon(Owner, startPos, startRot);
         SpawnComponent->SendBulletPacket(startPos, startRot);//서버 전송
     }
 

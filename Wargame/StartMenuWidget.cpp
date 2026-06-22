@@ -22,12 +22,43 @@ void UStartMenuWidget::SetStartMenuPawn(AStartMenuPawn* pawn)
 	StartPawn = pawn;
 }
 
+void UStartMenuWidget::SetStartButtonDisabled()
+{
+	if (StartButton)
+	{
+		StartButton->SetIsEnabled(false);
+	}
+}
+
+void UStartMenuWidget::UpdateTitleText(bool state)
+{
+	if (TitleTitleText)
+	{
+		TitleTitleText->SetIsEnabled(state);
+	}
+}
+
 void UStartMenuWidget::OnStartClicked()
 {
 	int32 TimeValue = 5;
 
 	SendTimePacket(TimeValue);	
-	
+	// ─── Room StartGame 패킷 추가 ───────────────
+	UMyServer* Server = GetGameInstance()->GetSubsystem<UMyServer>();
+	if (Server)
+	{
+		FRoomPacket Packet;
+		Packet.Header.Size = sizeof(FRoomPacket);
+		Packet.Header.Type = static_cast<int>(EPacketType::Room);
+		Packet.RoomType = ERoomPacketType::StartGame;
+		Packet.RoomId = -1;
+		Packet.PlayerCount = -1;
+		Packet.HostId = -1;
+
+		UE_LOG(LogTemp, Warning, TEXT("[Room] StartGame"));
+		Server->MoveRoomPacket(Packet);
+	}
+	// ─────────────────────────────────────────────
 	//StartPawn->MoveEnemy(1);
 }
 

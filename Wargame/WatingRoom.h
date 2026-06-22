@@ -18,8 +18,11 @@ class FPS_API UWatingRoom : public UUserWidget
 	GENERATED_BODY()
 	
 	UPROPERTY(meta = (BindWidget))
+	UTextBlock* TitleInformaitonText;
+	UPROPERTY(meta = (BindWidget))
 	UTextBlock* InformationText;
 
 public:
+	void ClearInformationText();
 	void SetInformationText(const FText& InText);
 };

@@ -37,6 +37,7 @@ public:
 	TQueue<FServerBullet, EQueueMode::Mpsc>* MeleeQueue;
 	TQueue<FItemPacket, EQueueMode::Mpsc>* ItemSpawnQueue;
 	TQueue<FVehiclePacket, EQueueMode::Mpsc>* VehicleQueue;
+	TQueue<FRoomPacket, EQueueMode::Mpsc>* RoomQueue;
 
 	UMyServer* Server;
 

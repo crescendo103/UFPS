@@ -3,6 +3,15 @@
 
 #include "PawnManager.h"
 #include "Helicopter.h"
+#include "GameConfigData2.h"
+
+void UPawnManager::Init(UGameConfigData2* Config2)
+{
+    //if (bInitialized || !Config) return;
+
+    SetHeliClass(Config2->HeliClass);
+    SetParachuteClass(Config2->ParachuteClass);
+}
 
 void UPawnManager::RegisterPlayer(AMyCharacter* player)
 {

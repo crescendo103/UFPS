@@ -34,7 +34,9 @@
 #include "ItemManagerSubsystem.h"
 #include "GameConfigData.h"
 #include "PawnVehicle.h"
+#include "RoomWidget.h"
 
+#include "CustomPlayerController.h"
 //FCriticalSection SendMutex;
 
 
@@ -83,6 +85,14 @@ void UMyServer::Initialize(FSubsystemCollectionBase& Collection)
 	IsSetMyOwner = false;
 	bInitialized = false;
 	
+	
+	empty.Header.Size = sizeof(FRoomPacket);
+	empty.Header.Type = static_cast<int>(EPacketType::Room);
+	empty.RoomType = ERoomPacketType::CreateRoom;
+	empty.RoomId = -1;
+	empty.PlayerCount = -1;
+	empty.HostId = -1;	
+
 	SetThreadSocketHandle();
 	
 	
@@ -167,24 +177,6 @@ void UMyServer::MoveClient(FCharacterPacket bullet)
 	bullet.CharacterId = MyOwner;//처음에 -1로 초기화
 	
 	SendAll((char*)&bullet, sizeof(FCharacterPacket));
-
-	UE_LOG(LogTemp, Warning,
-		TEXT("Client sizeof(FCharacterPacket) = %d"),
-		sizeof(FCharacterPacket));
-	/*
-	int nSendLen = send(Sock, (char*)&bullet, sizeof(FCharacterPacket), 0);
-	
-
-	if (nSendLen == SOCKET_ERROR)
-	{
-		UE_LOG(LogTemp, Error, TEXT("Send failed: %d"), WSAGetLastError());
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Sent bytes = %d"), nSendLen);
-	}*/
-	
-	
 }
 
 void UMyServer::MoveAI(FCharacterPacket packet)
@@ -268,6 +260,78 @@ void UMyServer::MoveVehicle(FVehiclePacket packet)
 	SendAll((char*)&packet, sizeof(FVehiclePacket));
 }
 
+void UMyServer::MoveRoomPacket(FRoomPacket packet)
+{
+	FScopeLock Lock(&SendMutex);
+
+	SOCKET Sock = reinterpret_cast<SOCKET>(SocketHandle);
+	packet.HostId = MyOwner;
+	SendAll((char*)&packet, sizeof(FRoomPacket));
+}
+
+void UMyServer::ProcessRoomPacket(FRoomPacket packet)
+{
+	ACustomPlayerController* PC =
+		Cast<ACustomPlayerController>(
+			GetWorld()->GetFirstPlayerController());
+
+	if (!PC)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[Room] PC is null"));
+		return;
+	}
+
+	FRoomPacket roomdata;
+	while (ClientThread->RoomQueue->Dequeue(roomdata))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Room] Dequeued RoomType=%d RoomId=%d"),
+			(int)roomdata.RoomType, roomdata.RoomId);
+
+		switch (roomdata.RoomType)
+		{
+		case ERoomPacketType::RoomInfo:
+		{
+			if (!PC->RoomWidget)
+			{
+				UE_LOG(LogTemp, Error, TEXT("[Room] RoomWidget is null!"));
+				break;
+			}
+
+			if (roomdata.RoomId == -1)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[Room] 방 입장 실패"));
+				break;
+			}
+
+			FString RoomName = FString(ANSI_TO_TCHAR(roomdata.RoomName));
+			UE_LOG(LogTemp, Warning, TEXT("[Room] AddRoom or Update RoomId=%d Name=%s PlayerCount=%d"),
+				roomdata.RoomId, *RoomName, roomdata.PlayerCount);
+
+			if (!PC->RoomWidget->RoomMap.Contains(roomdata.RoomId))
+				PC->RoomWidget->AddRoom(roomdata.RoomId, RoomName, roomdata.PlayerCount);
+			else
+				PC->RoomWidget->UpdateRoomPlayerCount(roomdata.RoomId, roomdata.PlayerCount);
+
+			break;
+		}
+		case ERoomPacketType::StartGame:
+		{
+			PC->HiddenRoomUI();
+			PC->ShowHiddenStartMenu();
+			break;
+		}
+		case ERoomPacketType::RemoveRoom:
+		{
+			PC->RoomWidget->RemoveRoom(roomdata.RoomId);
+			break;
+		}		
+		default:
+			break;
+		}
+	}
+	
+}
+
 void UMyServer::Shotoccurred(FServerBullet bullet)
 {
 	FScopeLock Lock(&SendMutex);
@@ -316,7 +380,8 @@ void UMyServer::ProcessPacket()
 	ProcessDeathPacket();
 	ProcessConnectionPacket();
 	ProcessItemPacket();
-	ProcessVehiclePacket();
+	ProcessVehiclePacket();	
+	ProcessRoomPacket(empty);
 }
 
 void UMyServer::SetBulletClass(TSubclassOf<ABullet> blueprint)
@@ -667,13 +732,7 @@ void UMyServer::UpdateCountdownUI()
 	
 }
 
-void UMyServer::SetMyCharacterId()
-{
-	AMyCharacter* Player = Cast<AMyCharacter>(LocalPlayer);
-	if (Player) {
-		Player->SetMyId(MyOwner);
-	}
-}
+
 
 void UMyServer::SetBombClass(TSubclassOf<ABomb> blueprint)
 {
@@ -946,18 +1005,22 @@ void UMyServer::ProcessConnectionPacket()
 	FConnectionPacket ConnectPacket;
 	while (ClientThread->ConnectQueue->Dequeue(ConnectPacket))
 	{
-		UE_LOG(LogTemp, Warning,
-			TEXT("ConnectPacket 안입니다."));
+		UE_LOG(LogTemp, Warning, TEXT("★★★ ConnectPacket 수신 order=%d MyOwner=%d"),
+			ConnectPacket.order, MyOwner);
 
 		if (MyOwner == -1) {
 			MyOwner = ConnectPacket.order;
+			UE_LOG(LogTemp, Warning, TEXT("MyOwner 설정됨 = %d"), MyOwner);
 		}
 		else {
-			for (ALoadingEnemy2* Player : StartPlayers)//?
+			UE_LOG(LogTemp, Warning, TEXT("연출 분기 진입 order=%d"), ConnectPacket.order);
+			for (ALoadingEnemy2* Player : StartPlayers)
 			{
-				if (Player->getMyOrder() == ConnectPacket.order) {
-					Player->MoveEnemy();
-				}
+				Player->MoveEnemy();
+				//UE_LOG(LogTemp, Warning, TEXT("Player order=%d"), Player->getMyOrder());
+				//if (Player->getMyOrder() == ConnectPacket.order) {
+				//	Player->MoveEnemy();
+				//}
 			}
 		}
 	}

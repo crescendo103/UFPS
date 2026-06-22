@@ -61,9 +61,8 @@ public:
 	
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-    virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
-    //void spawnActor(FServerBullet pos);
-    virtual void OnRep_Controller() override;
+    virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;    
+    //virtual void OnRep_Controller() override;6-18
 
     UFUNCTION()
     void OnOverlapWithItem(AActor* OverlappedActor, AActor* OtherActor);
@@ -158,9 +157,7 @@ public:
     UMyServer* MyServer;
     int32 MyOwner;
     
-    void SetMyId(int32 id);
-    int32 GetMyId();
-
+    
     UPROPERTY(EditDefaultsOnly, Category = "UI")
     TSubclassOf<UMyInventory> InventoryWidgetClass;//블루프린트 위젯 설계도
     UPROPERTY()
@@ -172,9 +169,7 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
     TSubclassOf<AVisualGrenade> VisualGrenadeClass;
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-    UWeaponComponent* WeaponComponent;
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "WeaponRay")
-    FHitResult BulletRayResult;
+    UWeaponComponent* WeaponComponent;    
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
     UGrenadeThrowCalculateCompo* GrenadeCalComponent;
 
@@ -200,9 +195,7 @@ public:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     USkeletalMeshComponent* MarkMesh;
-
-    int32 test;
-
+        
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     int32 PlayerID;
     
@@ -261,8 +254,8 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Heli")
     TSubclassOf<AActor> ParachuteClass;
 
-    void SetPlayerID(int32 id);
-    int32 GetPlayerID();
+    //void SetPlayerID(int32 id);
+    //int32 GetPlayerID();
 
 
     void OnDamaged();
@@ -303,9 +296,7 @@ public:
 
 
     public:
-        UTextureRenderTarget2D* GetMinimapRT() const { return MinimapRT; }
-
-        float SendTimer = 0;
+        UTextureRenderTarget2D* GetMinimapRT() const { return MinimapRT; }        
 
         UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "redZone")
         TSubclassOf<ABomb> BombClass;

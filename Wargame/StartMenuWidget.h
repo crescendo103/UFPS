@@ -24,6 +24,9 @@ public:
 	UPROPERTY(meta = (BindWidget))
 	UButton* StartButton;
 
+	//titel
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* TitleTitleText;
 	// ≈ÿΩ∫∆Æ
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* TitleText;
@@ -31,12 +34,13 @@ public:
 
 	AStartMenuPawn* StartPawn;
 	void SetStartMenuPawn(AStartMenuPawn* pawn);
-
+	void SetStartButtonDisabled();
+	void UpdateTitleText(bool state);
 private:
 
 	UFUNCTION()
 	void OnStartClicked();
-
+	
 	void SendTimePacket(int32 TimeValue);
 
 	int32 CountdownValue;

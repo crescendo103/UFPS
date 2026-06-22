@@ -40,8 +40,7 @@ AMyCharacter::AMyCharacter()
     CameraBoom->SetupAttachment(RootComponent); // 캐릭터의 루트 컴포넌트 (CapsuleComponent)에 부착
     //CameraBoom->TargetArmLength = 300.0f; // 카메라와 캐릭터 사이의 거리
     CameraBoom->TargetArmLength = 0.0f;
-    CameraBoom->SetRelativeLocation(FVector(42.f, 0.f, 62.f));
-    bIsFirstPerson = true;
+    CameraBoom->SetRelativeLocation(FVector(42.f, 0.f, 62.f));    
     CameraBoom->bUsePawnControlRotation = true; // 컨트롤러의 회전(Yaw)을 따라가도록 설정
     CameraBoom->bInheritPitch = true; // 컨트롤러의 피치(Pitch) 회전을 상속받도록 설정
     CameraBoom->bInheritYaw = true;   // 컨트롤러의 야(Yaw) 회전을 상속받도록 설정
@@ -54,7 +53,7 @@ AMyCharacter::AMyCharacter()
 
     CameraBoom->TargetArmLength = 0.0f;
     CameraBoom->SetRelativeLocation(FVector(42.f, 0.f, 62.f));
-    bIsFirstPerson = true;
+    bIsFirstPerson = true;//1인칭 3인칭 구분용
 
     // 디버그용이면
     GetCapsuleComponent()->SetHiddenInGame(false);
@@ -94,9 +93,7 @@ AMyCharacter::AMyCharacter()
     minimapCapture->ShowFlags.SetAtmosphere(false);
     minimapCapture->ShowFlags.SetCloud(false);
     minimapCapture->bCaptureEveryFrame = true;
-    minimapCapture->bCaptureOnMovement = true;
-    
-    
+    minimapCapture->bCaptureOnMovement = true;        
     
     minimapSprite = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("MinimapSprite"));
     minimapSprite->SetupAttachment(RootComponent);
@@ -106,9 +103,7 @@ AMyCharacter::AMyCharacter()
     minimapSprite->SetWorldLocation(FVector(0.f, 0.f, 300.f));
 
     globalSprite = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("GlobalmapSprite"));
-    globalSprite->SetupAttachment(RootComponent);
-    //인게임에서 보이지 않게 하는 옵션(캡처에서만 보이게 하는)
-    //minimapSprite->bVisibleInSceneCaptureOnly = true;
+    globalSprite->SetupAttachment(RootComponent);    
 
     ConstructorHelpers::FObjectFinder<UPaperSprite> FOBJ_PaperSprite(TEXT("/Script/Paper2D.PaperSprite'/Game/Mycontent/MiniMap/row_Sprite.row_Sprite'"));
     if (FOBJ_PaperSprite.Succeeded())
@@ -116,15 +111,11 @@ AMyCharacter::AMyCharacter()
         minimapSprite->SetSprite(FOBJ_PaperSprite.Object);
     }
     
-    HitPostProcessComp =
-        CreateDefaultSubobject<UCP_BloodEffect>(
-            TEXT("HitPostProcessComponent")
-        );
+    HitPostProcessComp = CreateDefaultSubobject<UCP_BloodEffect>(TEXT("HitPostProcessComponent"));
 
-    MarkMesh =
-        CreateDefaultSubobject<USkeletalMeshComponent>(
-            TEXT("MarkMesh"));
+    MarkMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MarkMesh"));
     MarkMesh->SetupAttachment(GetMesh());
+
     CurrentWeapon = EWeaponType::Melee;
 }
 
@@ -149,23 +140,16 @@ void AMyCharacter::BeginPlay()
             }
         }
     }
-
     bIsStanding = true;
-    bIsInAir = false;
-    //bIsFirstPerson = false;
+    bIsInAir = false;    
     
     CurrentHp = 100;
     MyServer = GetGameInstance()->GetSubsystem<UMyServer>();
-    if (MyServer) {
-        //MyServer->SetBulletClass(BulletClass);
-        //MyServer->SetEnermyClass(EnermyClass);
-       // MyServer->SetAiClass(AIClass);
-        //MyServer->SetGrenadeClass(GrenadeClass);
+    if (MyServer) {        
         MyServer->SetRocalPlayer(this);
-    }
-    
+    }    
 
-    bulletId = 1;
+    bulletId = 1;//주먹데이터 채우는 용도
     IsInventoryActive = false;
     bIsHealKit = false;
     bIsDeath = false;
@@ -173,75 +157,62 @@ void AMyCharacter::BeginPlay()
     MyOwner = -1;
     CurrentHitMeCharacterID = -2;
 
-    // 오버랩 시작
-    OnActorBeginOverlap.AddDynamic(this, &AMyCharacter::OnOverlapWithItem);
-
-    // 오버랩 종료
-    OnActorEndOverlap.AddDynamic(this, &AMyCharacter::OnOverlapEndWithItem);
-    //1-30                
-    
-   
+    //아이템에 가까이 가면 인벤토리에 보이게 하는 효과
+    OnActorBeginOverlap.AddDynamic(this, &AMyCharacter::OnOverlapWithItem);    
+    OnActorEndOverlap.AddDynamic(this, &AMyCharacter::OnOverlapEndWithItem);       
     
     if (IsLocallyControlled())
     {
         PC = Cast<APlayerController>(GetController());
         if (PC)
         {
-            InitScreenCenter();
+            InitScreenCenter();// 조준점 화면 가운데로
         }
         else
         {
             UE_LOG(LogTemp, Warning, TEXT("BeginPlay: PC is null"));
         }
+    }    
+
+    if(IsLocallyControlled()) // ← 이 안으로 이동
+    {
+        PC = Cast<APlayerController>(GetController());
+        if (PC)
+        {
+            InitScreenCenter();
+        }
+
+        // 타이머를 로컬 플레이어에서만 등록
+        GetWorldTimerManager().SetTimer(
+            ExplosionTimerHandle,
+            this,
+            &AMyCharacter::CameraLineTrace,
+            0.3f,
+            true
+        );
+
+        UE_LOG(LogTemp, Warning, TEXT("Timer registered! IsValid: %d"), ExplosionTimerHandle.IsValid());
     }
-    test = 0;
 
-    GetWorldTimerManager().SetTimer(
-        ExplosionTimerHandle,
-        this,
-        &AMyCharacter::CameraLineTrace, // ✅ 함수 포인터
-        1.0f,
-        true // 반복 호출
-    );
-
-    InventoryActive();
-
-   
-
-    
-    FActorSpawnParameters SpawnParams;
-    SpawnParams.Owner = this;
-    SpawnParams.Instigator = GetInstigator();
-
-    FTransform SpawnTM = GetMesh()->GetSocketTransform(
-        TEXT("RightHandPinky4Socket"),
-        RTS_World
-    );
-        
+    InventoryActive();//인벤토리 위젯 생성        
 
     if (IsLocallyControlled())
     {
         MinimapRT = NewObject<UTextureRenderTarget2D>(this);
         MinimapRT->InitAutoFormat(1024, 1024);
-
         minimapCapture->TextureTarget = MinimapRT;
-
-        ACustomPlayerController* PsC = Cast<ACustomPlayerController>(GetController());
-        if (PsC)
+        ACustomPlayerController* PCCustom = Cast<ACustomPlayerController>(GetController());
+        if (PCCustom)
         {
-            PsC->InitMinimap(MinimapRT); // 🔥 여기서 넘김
+            PCCustom->InitMinimap(MinimapRT);
         }
     }
     else
     {
         minimapCapture->Deactivate();
     }
-
-
-    //MyServer->SetBombClass(BombClass);
-    //MyServer->SetBlueHoleClass(BlueHoleClass);
 }
-
+/*
 void AMyCharacter::OnRep_Controller()
 {
     Super::OnRep_Controller();
@@ -253,19 +224,21 @@ void AMyCharacter::OnRep_Controller()
     if (!PC) return;
 
     InitScreenCenter();
-}
+}*/
 
 void AMyCharacter::InitScreenCenter()
 {
     int32 ViewportX;
     int32 ViewportY;
     PC->GetViewportSize(ViewportX, ViewportY);
-    ScreenCenter.X = ViewportX * 0.5f;  // X 값 초기화
+    ScreenCenter.X = ViewportX * 0.5f;  
     ScreenCenter.Y = ViewportY * 0.5f;
 }
 
 void AMyCharacter::CameraLineTrace()
 {
+    UE_LOG(LogTemp, Warning, TEXT("[RayCast]"));
+
     FVector Start = FollowCamera->GetComponentLocation();
     FVector End = Start + (FollowCamera->GetForwardVector() * 5000.f);
 
@@ -276,12 +249,15 @@ void AMyCharacter::CameraLineTrace()
         Hit,
         Start,
         End,
-        ECC_GameTraceChannel4,//ItemHighlight 채널
+        ECC_Visibility,//ItemHighlight 채널
         Params
     );
     if (bHit)
     {
         //UE_LOG(LogTemp, Warning, TEXT("Hit Location: %s"), *Hit.ImpactPoint.ToString());
+        UE_LOG(LogTemp, Warning, TEXT("Hit: %s / Implements: %d"),
+        *Hit.GetActor()->GetName(),
+        Hit.GetActor()->Implements<UHighlightInterface>());
         AActor* HitActor = Hit.GetActor();
         
         if (HitActor && HitActor->Implements<UHighlightInterface>())
@@ -291,6 +267,8 @@ void AMyCharacter::CameraLineTrace()
         }
     }
     else {
+        UE_LOG(LogTemp, Warning, TEXT("No Hit"));
+
         for (AActor* Item : Items)
         {
             if (!Item) continue;
@@ -311,7 +289,7 @@ void AMyCharacter::CameraLineTrace()
             1.f
         );
     }
-    
+    int32 a = 0;
 }
 
 void AMyCharacter::InventoryActive()
@@ -331,7 +309,7 @@ void AMyCharacter::InventoryActive()
         {
             // ===== 인벤토리 ON =====
             InventoryWidget->SetVisibility(ESlateVisibility::Visible);
-            InventoryWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);//원리가 뭘까
+            InventoryWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
             InventoryWidget->OnOffPZarts();
             FInputModeGameAndUI InputMode;
             InputMode.SetHideCursorDuringCapture(false);
@@ -352,20 +330,19 @@ void AMyCharacter::InventoryActive()
         IsInventoryActive = !IsInventoryActive;
         return;
     }
+    else {
+        APlayerController* pc = GetWorld()->GetFirstPlayerController();
+        if (!pc)
+            return;
 
-    APlayerController* pc = GetWorld()->GetFirstPlayerController();
-    if (!pc)
-        return;
-
-    InventoryWidget = CreateWidget<UMyInventory>(pc, InventoryWidgetClass);
-    if (InventoryWidget)
-    {
-        //InventoryWidget->AddToViewport();
-
-        InventoryWidget->AddToViewport();
-        InventoryWidget->SetVisibility(ESlateVisibility::Hidden);        
-        InventoryWidget->SetMyOwner(this);
-    }
+        InventoryWidget = CreateWidget<UMyInventory>(pc, InventoryWidgetClass);
+        if (InventoryWidget)
+        {            
+            InventoryWidget->AddToViewport();
+            InventoryWidget->SetVisibility(ESlateVisibility::Hidden);
+            InventoryWidget->SetMyOwner(this);
+        }
+    }    
 }
 
 void AMyCharacter::InterActionRayCast()
@@ -449,7 +426,7 @@ void AMyCharacter::InterActionRayCast()
             HitItem->sendItemPacket();
 
         }
-        else if (AEnemyBox* enemyBox = Cast<AEnemyBox>(Hit.GetActor())) {
+        else if (AEnemyBox* enemyBox = Cast<AEnemyBox>(Hit.GetActor())) {//미완성
             for (AActor* Item : enemyBox->GetDropBoxItems())
             {
                 AWeaponActor* enemyItem = Cast<AWeaponActor>(Item);
@@ -457,7 +434,7 @@ void AMyCharacter::InterActionRayCast()
             }
             
             InventoryActive();
-        }
+        }//미완성
         else
         {
             UE_LOG(LogTemp, Warning, TEXT("[RayCast] Hit actor is NOT WeaponActor"));
@@ -478,17 +455,16 @@ void AMyCharacter::PossessedBy(AController* NewController)
 
     ULocalPlayer* LP = PCC->GetLocalPlayer();
     if (!LP) return;
-
+    
     PM = LP->GetSubsystem<UPawnManager>();
     if (!PM) return;
-
+    /*
     PM->RegisterPlayer(this);
     PM->SetHeliClass(HeliClass);
     PM->SetParachuteClass(ParachuteClass);
-
+    */
     // 🔥 추가
-    UEnhancedInputLocalPlayerSubsystem* Subsystem =
-        LP->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
+    UEnhancedInputLocalPlayerSubsystem* Subsystem = LP->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
 
     if (Subsystem && DefaultMappingContext)
     {
@@ -563,16 +539,16 @@ void AMyCharacter::DetachParachute()
     // 4️⃣ 참조 정리
     Parachute = nullptr;
 }
-
+/*
 void AMyCharacter::SetPlayerID(int32 id)
 {
     PlayerID = id;
-}
-
+}*/
+/*
 int32 AMyCharacter::GetPlayerID()
 {
     return PlayerID;
-}
+}*/
 
 void AMyCharacter::OnDamaged()
 {
@@ -595,8 +571,7 @@ void AMyCharacter::InZone()
 {
     if (HitPostProcessComp)
     {
-        HitPostProcessComp->TriggerZoneEffect(0.f);
-        
+        HitPostProcessComp->TriggerZoneEffect(0.f);        
     }
 }
 
@@ -606,15 +581,13 @@ void AMyCharacter::AimActive()
     if (isSubWeaponActive && SubItemData.SubItemClass) {
         GrenadeCalComponent->SetbShow(true);        
         return;
-    }    
-    //AimWidget->SetVisibility(ESlateVisibility::Hidden);
-     
+    }            
     
     if (!CurrentGunWeapon) {
         UE_LOG(LogTemp, Warning, TEXT("CurrentWeapon is NULL"));
         return;
-    }
-    
+    }    
+
     if (CurrentWeapon != EWeaponType::Melee &&CurrentGunWeapon)
     {
         FollowCamera->AttachToComponent(
@@ -622,10 +595,7 @@ void AMyCharacter::AimActive()
             FAttachmentTransformRules::SnapToTargetIncludingScale,
             TEXT("GunCompo")
         );
-    }
-    /*
-    CurrentGunWeapon->GetMyGunCompo()->EnableScope(true);
-    */
+    }    
 }
 
 void AMyCharacter::AimDeActive()
@@ -642,25 +612,17 @@ void AMyCharacter::AimDeActive()
         return;
     }
 
-    // 🔴 [안전장치 추가] 혹시나 위 조건문이 타이밍 때문에 패스되었더라도, 
-    // 수류탄 스플라인이 켜져 있다면 여기서 무조건 꺼줍니다.
+    // 혹시나 위 조건문이 타이밍 때문에 패스되었더라도, 
+    // 혹시 수류탄 스플라인이 켜져 있다면 여기서 무조건 꺼줍니다.
     if (GrenadeCalComponent && GrenadeCalComponent->bShow)
     {
         GrenadeCalComponent->MouseVal = 0.f;
         GrenadeCalComponent->SetbShow(false);
     }
-
-    //AimWidget->SetVisibility(ESlateVisibility::Visible);
-    if (!CurrentGunWeapon) {
-        UE_LOG(LogTemp, Warning, TEXT("CurrentWeapon is NULL"));
-        return;
-    }
-    // 🔥 카메라를 SpringArm 기본 상태로 되돌림
+    
+    // 카메라를 SpringArm 기본 상태로 되돌림
     FollowCamera->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
-    FollowCamera->AttachToComponent(CameraBoom, FAttachmentTransformRules::SnapToTargetIncludingScale);
-    /*
-    CurrentGunWeapon->GetMyGunCompo()->EnableScope(false);
-    */
+    FollowCamera->AttachToComponent(CameraBoom, FAttachmentTransformRules::SnapToTargetIncludingScale);    
 }
 
 void AMyCharacter::Die(int32 CauserCharacterId)
@@ -669,14 +631,7 @@ void AMyCharacter::Die(int32 CauserCharacterId)
     if (bIsDeadFinal)
         return;
 
-    bIsDeadFinal = true;
-
-    // 입력 막기
-    APlayerController* PsdC = Cast<APlayerController>(GetController());
-    if (PsdC)
-    {
-        DisableInput(PsdC);
-    }
+    bIsDeadFinal = true;    
 
     UWorld* World = GetGameInstance()->GetWorld();
     if (!World) return;
@@ -686,6 +641,7 @@ void AMyCharacter::Die(int32 CauserCharacterId)
 
     if (!controller) return;
 
+    DisableInput(controller);
     
     UEndGameUIWidget* EndGameUI = controller->GetUEndGameUIWidget();
     UkillAccountWidget* Widget = controller->GetDeathWidget();
@@ -722,9 +678,7 @@ void AMyCharacter::Die(int32 CauserCharacterId)
     // 이동 완전 정지
     GetCharacterMovement()->StopMovementImmediately();
     GetCharacterMovement()->DisableMovement();
-    GetCharacterMovement()->SetMovementMode(MOVE_None);
-        
-    
+    GetCharacterMovement()->SetMovementMode(MOVE_None);    
 
     FDeathPacket packet;
     packet.Header.Type = (int32)EPacketType::Death;
@@ -732,7 +686,7 @@ void AMyCharacter::Die(int32 CauserCharacterId)
     packet.aiid = -1;
     packet.characterid = -1;
     {
-        // 🔥 이름 안전하게 복사 (7글자 제한)
+        // 이름 안전하게 복사 (7글자 제한)
         FString InName = "client1";
         FString SafeName = InName.Left(7);
         FTCHARToUTF8 Convert(*SafeName);  // TCHAR → UTF8(char)
@@ -746,7 +700,6 @@ void AMyCharacter::Die(int32 CauserCharacterId)
         strncpy(packet.CausedName, Convert.Get(), sizeof(packet.CausedName) - 1);
         packet.CausedName[sizeof(packet.CausedName) - 1] = '\0';
     }
-
     packet.causedCharacterId = CauserCharacterId;
     MyServer->MoveDeath(packet);
 }
@@ -779,24 +732,9 @@ void AMyCharacter::SpawnPunchCollision()
     FVector Start = GetActorLocation();
     FVector End = Start + GetActorForwardVector() * 120.f;
 
-    /*
-    float LifeTime = 1.f;   // 스피어가 화면에 남아있는 시간
-
-    DrawDebugSphere(
-        GetWorld(),
-        End,        // 스피어 위치
-        30.f,       // 반지름
-        16,         // 세그먼트 (원 해상도)
-        FColor::Red,
-        false,      // persistent
-        LifeTime,   // 유지 시간
-        0,
-        2.f         // 선 두께
-    );
-    */
+    
     //서버 패킷 작성
-
-    UMyServer* MyServerr = GetGameInstance()->GetSubsystem<UMyServer>();
+    MyServer = GetGameInstance()->GetSubsystem<UMyServer>();
     
     FServerBullet Melee;
     Melee.Header.Type = (int32)EPacketType::Melee;
@@ -812,7 +750,7 @@ void AMyCharacter::SpawnPunchCollision()
     Melee.Speed = 1200.f;
     Melee.Sendtime = FPlatformTime::Seconds();
     Melee.flag = false;
-    MyServerr->Shotoccurred(Melee);
+    MyServer->Shotoccurred(Melee);
 }
 
 void AMyCharacter::EndPunchCollision()
@@ -823,12 +761,11 @@ void AMyCharacter::EndPunchCollision()
 void AMyCharacter::AddViewPortGlobalMap()
 {
     
-    ACustomPlayerController* PsC = Cast<ACustomPlayerController>(GetController());
-    if (PsC)
+    ACustomPlayerController* CPC = Cast<ACustomPlayerController>(GetController());
+    if (CPC)
     {
-        PsC->UpdateGlobalMap(bGlobalMap); // 🔥 여기서 넘김
+        CPC->UpdateGlobalMap(bGlobalMap); // 여기서 넘김
     }
-
     bGlobalMap = !bGlobalMap;
 }
 
@@ -837,14 +774,11 @@ void AMyCharacter::WeaponAttach(AActor* weapon, FName sockname)
     if (weapon)
     {
         CurrentGunWeapon = Cast<AWeaponActor>(weapon);
-
         CurrentGunWeapon->SetMyOwner(this);
 
-        USkeletalMeshComponent* SkelMesh =
-            weapon->FindComponentByClass<USkeletalMeshComponent>();
-        USphereComponent* sphere = 
-            weapon->FindComponentByClass<USphereComponent>();
-        //sphere->SetGenerateOverlapEvents(false);
+        USkeletalMeshComponent* SkelMesh = weapon->FindComponentByClass<USkeletalMeshComponent>();
+        USphereComponent* sphere = weapon->FindComponentByClass<USphereComponent>();
+        
         if (SkelMesh)
         {
             SkelMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -852,23 +786,13 @@ void AMyCharacter::WeaponAttach(AActor* weapon, FName sockname)
             SkelMesh->SetSimulatePhysics(false); // 필요 시
         }
         if (sphere)
-        {
-            //SkelMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-            sphere->SetGenerateOverlapEvents(false);
-            //SkelMesh->SetSimulatePhysics(false); // 필요 시
-        }
-       
+        {            
+            sphere->SetGenerateOverlapEvents(false);            
+        }       
         weapon->SetActorLocation(FVector::ZeroVector);
         weapon->SetActorRotation(FRotator::ZeroRotator);
-
-        weapon->AttachToComponent(
-            GetMesh(),
-            FAttachmentTransformRules::SnapToTargetNotIncludingScale,
-            sockname
-        );
-    }
-
-     
+        weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, sockname);
+    }     
 }
 
 void AMyCharacter::setCurrentWeapon(EWeaponType type)
@@ -882,44 +806,13 @@ void AMyCharacter::resetCurrentGunWeapon()
     CurrentGunWeapon = nullptr;
 }
 
-
-
-
 void AMyCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
     // 매 프레임 애니메이션 관련 변수 업데이트
-    UpdateAnimationVariables();
-    //UE_LOG(LogTemp, Warning, TEXT("Pawn: %s"), *GetName());
-
-    if (BulletRayResult.GetActor() != nullptr) {
-        /*
-        GEngine->AddOnScreenDebugMessage(
-            -1,            // Key (-1 = 새 메시지)
-            0.5f,          // 화면에 표시되는 시간 (초)
-            FColor::Red,   // 색상
-            TEXT("Hit!")
-        );*/
-
-        // 맞은 지점에 구 표시
-        DrawDebugSphere(
-            GetWorld(),
-            BulletRayResult.ImpactPoint,
-            8.f,
-            12,
-            FColor::Red,
-            false,
-            0.2f
-        );
-    }
+    UpdateAnimationVariables();      
     
-    
-    /*
-    if (IsLocallyControlled() && AimWidget)
-    {
-        AimWidget->SetAim(CurrentSpeed > 1);
-    }*/
-    
+    //캐릭터 위치 방향을 서버로
     float Speed = GetCharacterMovement()->Velocity.Size();
     FVector MoveDir = GetVelocity().GetSafeNormal();//실제 이동 방향
     FVector ForwardDir = GetActorForwardVector();//바라보는방향
@@ -946,40 +839,19 @@ void AMyCharacter::Tick(float DeltaTime)
     }
     else {
         man.WeaponType = CurrentWeapon;
-    }
-    
+    }    
     man.AimActive = bIsZooming;
     if (MyServer) {
         MyServer->MoveClient(man);
     }
     /*
-    SendTimer += DeltaTime;
-    if (SendTimer >= 0.1f) // 20Hz
-    {
-        if (MyServer) {
-            MyServer->MoveClient(man);
-        }
-        SendTimer = 0;
-    }
-    */
-   
     if (MarkMesh)
     {
         MarkMesh->MarkRenderStateDirty();
-    }
-    
+    }*/    
 }
 
 
-void AMyCharacter::SetMyId(int32 id)
-{
-    MyOwner = id;
-}
-
-int32 AMyCharacter::GetMyId()
-{
-    return MyOwner;
-}
 
 void AMyCharacter::UpdateAnimationVariables()
 {
@@ -994,9 +866,7 @@ void AMyCharacter::UpdateAnimationVariables()
 // Called to bind functionality to input
 void AMyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-    UE_LOG(LogTemp, Warning, TEXT("🔥 SetupPlayerInputComponent 호출됨"));
+	Super::SetupPlayerInputComponent(PlayerInputComponent);    
 
     // EnhancedInputComponent로 캐스팅
     if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
@@ -1120,27 +990,8 @@ void AMyCharacter::Jump()
         return;
     
     Super::Jump(); // ACharacter의 기본 점프 함수 호출
-    bIsJumping = true;
-    /*
-    FVector StartPos = Weapon->GetGunStartLocation();
-    FVector Dir = PC->GetControlRotation().Vector();
-    FServerBullet Bullet;
-    Bullet.BulletId = test;//쓰레기값
-    Bullet.X = StartPos.X;//100.f;
-    Bullet.Y = StartPos.Y;//200.f;
-    Bullet.Z = StartPos.Z;//300.f;
-    Bullet.DirX = Dir.X;//1.f;
-    Bullet.DirY = Dir.Y;//0.f;
-    Bullet.DirZ = Dir.Z;//0.f;
-    Bullet.Speed = 1200.f;
-    Bullet.Sendtime = FPlatformTime::Seconds();
-    Bullet.flag = true;
-    MyServer->Shotoccurred(Bullet);
-    test++;
-    */
-    //InventoryWidget->AddFloorItemBox(0);
-   
-    OnDamaged();
+    bIsJumping = true;   
+    
 }
 void AMyCharacter::StopJumping()
 {
@@ -1173,13 +1024,10 @@ void AMyCharacter::StartFire()
     else if (CurrentWeapon == EWeaponType::Grenade)
     {
         FVector HandLocation = GetMesh()->GetSocketLocation(GunSocket);
-        //GrenadeCalComponent->SetStartPos(HandLocation);아마 안써
-
-        //GrenadeCalComponent->SetbShow(true);5-27
-
         return;
     }
-    else if (CurrentWeapon == EWeaponType::Rifle) {       
+    else if (CurrentWeapon == EWeaponType::Rifle) {     
+        //if (CurrentGunWeapon) 아래 if문에서 패킷 보내는걸로
         /*
         FVector StartPos = CurrentGunWeapon->GetGunStartLocation();
         FVector Dir = PC->GetControlRotation().Vector();
@@ -1197,22 +1045,37 @@ void AMyCharacter::StartFire()
         Bullet.Speed = 1200.f;
         Bullet.Sendtime = FPlatformTime::Seconds();
         Bullet.flag = false;
-        MyServer->Shotoccurred(Bullet); */       
+        MyServer->Shotoccurred(Bullet); */   
     }
     else {
         PlayPunch();
     }
-    
-    
-    if (CurrentGunWeapon) {
-        FVector StartPos = CurrentGunWeapon->GetGunStartLocation();
-        FVector Dir = PC->GetControlRotation().Vector();
+            
+    if (CurrentGunWeapon)
+    {
+        APlayerController* CPC = Cast<APlayerController>(GetController());
+        if (!CPC) return;
 
-        //CurrentGunWeapon->UseItem();//이펙트 스폰아이템이 처리하는게 좋아보이네 3 29
-        CurrentGunWeapon->SpawnItem(StartPos, Dir);//나는 내가그림
-        
+        // 카메라 위치와 방향 가져오기
+        FVector CameraLocation;
+        FRotator CameraRotation;
+        CPC->GetPlayerViewPoint(CameraLocation, CameraRotation);
+
+        int32 ViewportX, ViewportY;
+        CPC->GetViewportSize(ViewportX, ViewportY);
+
+        FVector WorldPos, WorldDir;
+        CPC->DeprojectScreenPositionToWorld(
+            ViewportX * 0.5f,
+            ViewportY * 0.5f,
+            WorldPos,
+            WorldDir
+        );
+
+        // 시작지점 = 카메라 위치, 방향 = 화면 중앙
+        CurrentGunWeapon->SpawnItem(CameraLocation, WorldDir);
     }
-    
+
 }
 
 void AMyCharacter::EndFire()
@@ -1226,11 +1089,9 @@ void AMyCharacter::EndFire()
 
     if (isSubWeaponActive)
     {                
-        if(SubItemData.SubItemClass && SubItemData.Id!=0)
+        if(SubItemData.SubItemClass && SubItemData.Id!=0)//수류탄은 여기서 발사
         {            
-
             FTransform SocketTransform = GetMesh()->GetSocketTransform("RightHandPinky4Socket", RTS_World);
-
             FActorSpawnParameters SpawnParams;//스폰할 액터의 옵션 지정
             SpawnParams.Owner = this;//소유자를 캐릭터로
             SpawnParams.Instigator = GetInstigator();//이 무기를 스폰한 주체가 누군지
@@ -1238,25 +1099,21 @@ void AMyCharacter::EndFire()
             //SubItem = GetWorld()->SpawnActor<AMyGrenade>(GrenadeClass, SocketTransform, SpawnParams);
            
             AMyGrenade* Grenade = Cast<AMyGrenade>(SubItem);
-
             FVector Direction = FVector::ForwardVector;
             if (GrenadeCalComponent)
             {
                 Direction = GrenadeCalComponent->GetFinalThrowDirection();
             }
-
-
-            // 4. 던지기
+            //던지기
             if (Grenade)
             {
                 Grenade->Throw(Direction, 1000.f);
-            }
-            
+            }            
 
             FGrenadePacket packet;
             packet.Header.Type = (int32)EPacketType::Grenade;
             packet.Header.Size = sizeof(FGrenadePacket);
-            packet.GrenadeId = SubItemData.Id;//수류탄 ID
+            packet.GrenadeId = SubItemData.Id;//수류탄 ID 아마 안쓸듯
             packet.CharacterId = -2;//trash
             packet.X = SocketTransform.GetLocation().X;
             packet.Y = SocketTransform.GetLocation().Y;
@@ -1265,9 +1122,7 @@ void AMyCharacter::EndFire()
             packet.DirY = Direction.Y;
             packet.DirZ = Direction.Z;
             packet.Power = 1000;
-
             MyServer->CreateGrenade(packet);
-
 
             // 조준이 끝났으므로 휠 누적값 초기화 및 예측선 끄기
             if (GrenadeCalComponent)
@@ -1281,13 +1136,9 @@ void AMyCharacter::EndFire()
 
 void AMyCharacter::Crouching()
 {
-
     if (!IsLocallyControlled())
         return;
     bIsStanding = false;
-
-    
-    //PM->SpawnHeli();
 }
 
 void AMyCharacter::CrouchingEnd()
@@ -1311,26 +1162,12 @@ void AMyCharacter::ChangeLook()
     if (bIsFirstPerson) {
         bIsFirstPerson = false;
         CameraBoom->TargetArmLength = 500.0f;
-        CameraBoom->SetRelativeLocation(FVector(0.f, 0.f, 100.f));
-        GEngine->AddOnScreenDebugMessage(
-            -1,            // -1 = 새 줄 (BP Print String 기본 동작)
-            2.0f,          // 화면에 표시될 시간
-            FColor::Yellow,
-            TEXT("3333")
-        );
-
+        CameraBoom->SetRelativeLocation(FVector(0.f, 0.f, 100.f));       
     }
     else {//3->1인칭
         bIsFirstPerson = true;
         CameraBoom->TargetArmLength = 0.0f;
-        CameraBoom->SetRelativeLocation(FVector(42.f, 0.f, 62.f));
-        GEngine->AddOnScreenDebugMessage(
-            -1,            // -1 = 새 줄 (BP Print String 기본 동작)
-            2.0f,          // 화면에 표시될 시간
-            FColor::Yellow,
-            TEXT("1111")
-        );
-
+        CameraBoom->SetRelativeLocation(FVector(42.f, 0.f, 62.f));        
     }
     /*
     if (Parachute) {
@@ -1373,27 +1210,12 @@ float AMyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
     if (bIsDeadFinal)
         return 0;
 
-    Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
-
-    // 🔹 Instigator 이름
-    FString InstigatorName = EventInstigator ? EventInstigator->GetName() : TEXT("None");
-
-    // 🔹 Damage를 유발한 액터 이름
-    FString CauserName = DamageCauser ? DamageCauser->GetName() : TEXT("None");
-
-    UE_LOG(LogTemp, Warning,
-        TEXT("TakeDamage called! Damage=%f, Instigator=%s, Causer=%s"),
-        DamageAmount,
-        *InstigatorName,
-        *CauserName
-    );
+    Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);    
 
     int32 OwnerId = -2;
-
     if (ABullet* Bullet = Cast<ABullet>(DamageCauser))
     {
         OwnerId = Bullet->GetOwnerID();
-
         UE_LOG(
             LogTemp,
             Warning,
@@ -1404,7 +1226,6 @@ float AMyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
     else if (AMyGrenade* Grenade = Cast<AMyGrenade>(DamageCauser))
     {
         OwnerId = Grenade->GetOwnerID();
-
         UE_LOG(
             LogTemp,
             Warning,
@@ -1415,7 +1236,6 @@ float AMyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
     else
     {
         OwnerId = CurrentHitMeCharacterID;
-
         UE_LOG(
             LogTemp,
             Warning,
@@ -1433,26 +1253,22 @@ float AMyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
         HitPostProcessComp->TriggerHitEffect(1.0f);
     }
 
-    ACustomPlayerController* PppC = Cast<ACustomPlayerController>(GetController());
-
-    if (PppC && PppC->HpBarWidget)
+    ACustomPlayerController* CPC = Cast<ACustomPlayerController>(GetController());
+    if (CPC && CPC->HpBarWidget)
     {
-        bIsDeath = PppC->HpBarWidget->SettHpBar(DamageAmount);
+        bIsDeath = CPC->HpBarWidget->SettHpBar(DamageAmount);
         if (bIsDeath) {            
             Die(OwnerId);
         }
     }
-
     return DamageAmount;
 }
 
-
+//인벤토리에 주변 아이템 보이게하기
 void AMyCharacter::OnOverlapWithItem(AActor* OverlappedActor, AActor* OtherActor)
 {    
     if (OtherActor && OtherActor->IsA(AWeaponActor::StaticClass()))
-    {
-        UE_LOG(LogTemp, Warning, TEXT("플레이어가 아이템 구체 안으로 들어왔습니다!"));
-
+    {        
         AWeaponActor* item = Cast<AWeaponActor>(OtherActor);
         if (item)
         {

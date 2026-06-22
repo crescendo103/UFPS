@@ -7,6 +7,7 @@
 #include <ws2tcpip.h>
 #include "MyServer.h"
 #include "Windows/HideWindowsPlatformTypes.h"
+#include "CustomPlayerController.h"
 
 ClientTrd::ClientTrd(void* InSocket, UMyServer* InServer)
 	: Socket(InSocket), Server(InServer)
@@ -26,7 +27,7 @@ ClientTrd::ClientTrd(void* InSocket, UMyServer* InServer)
 	VehicleQueue = new TQueue<FVehiclePacket, EQueueMode::Mpsc>();
 	Thread = FRunnableThread::Create(this, TEXT("Network Thread"));
 	//RecvQueue = new TQueue<FServerBulletPos, EQueueMode::Mpsc>();
-	
+	RoomQueue = new TQueue<FRoomPacket, EQueueMode::Mpsc>();
 }
 
 ClientTrd::~ClientTrd()
@@ -265,7 +266,18 @@ uint32 ClientTrd::Run()
 					});
 				break;
 			}
-
+			case EPacketType::Room:
+			{
+				FRoomPacket* RoomPacket =
+					reinterpret_cast<FRoomPacket*>(PacketPtr);				
+				RoomQueue->Enqueue(*RoomPacket);
+				//AsyncTask(ENamedThreads::GameThread, [this, RoomPacket]()
+				//	{
+				//		if (Server)
+				//			Server->ProcessRoomPacket(*RoomPacket);
+				//	});
+				break;
+			}
 			default:
 				UE_LOG(LogTemp, Warning, TEXT("Unknown packet type: %d"), Header->Type);
 				break;

@@ -22,7 +22,8 @@ enum class EPacketType : int
     BlueHole=11,
     Item=12,
     BoradCast=13,
-    Vehicle = 14
+    Vehicle = 14,
+    Room = 15
 };
 
 UENUM(BlueprintType)
@@ -429,3 +430,40 @@ struct FVehiclePacket
     UPROPERTY()
     bool IsHaveCharacter;
 };
+UENUM(BlueprintType)
+enum class ERoomPacketType : uint8
+{
+    None = 0,
+    CreateRoom = 1,  // 방 생성 요청
+    JoinRoom = 2,  // 방 참가 요청
+    RoomList = 3,  // 방 목록 조회
+    StartGame = 4,  // 시작 버튼 (방장만)
+    RoomInfo = 5,  // 방 정보 응답 (서버→클라)
+    RemoveRoom = 6,
+};
+
+
+USTRUCT(BlueprintType)
+struct FRoomPacket
+{
+    GENERATED_BODY()
+
+    UPROPERTY()
+    FPacketHeader Header;
+
+    UPROPERTY()
+    ERoomPacketType RoomType;
+
+    UPROPERTY()
+    int32 RoomId;
+
+    
+    char RoomName[16];
+
+    UPROPERTY()
+    int32 PlayerCount;
+
+    UPROPERTY()
+    int32 HostId;
+};
+

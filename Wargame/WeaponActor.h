@@ -33,23 +33,14 @@ public:
 
 	// 구체 콜리전 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Trigger")
-	class USphereComponent* TriggerSphere;
-
-	// 부모 머티리얼 (M_Overlay)
-	UPROPERTY(EditDefaultsOnly, Category = "Overlay")
-	UMaterialInterface* OverlayMaterial;
-	// 동적 머티리얼 인스턴스
-	UPROPERTY()
-	UMaterialInstanceDynamic* DynamicOverlay;
-
+	class USphereComponent* TriggerSphere;	
+	
 	UPROPERTY(EditDefaultsOnly, Category = "ItemName")
 	int32 ItemRowName;
-
-
+	
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-
 	virtual void ItemOutlineOn_Implementation() override;
 	virtual void ItemOutlineOff_Implementation() override;
 	

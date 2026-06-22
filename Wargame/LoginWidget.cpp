@@ -3,6 +3,7 @@
 
 #include "LoginWidget.h"
 #include "MyServer.h"
+#include "CustomPlayerController.h"
 
 
 void ULoginWidget::NativeConstruct()
@@ -43,6 +44,10 @@ void ULoginWidget::OnLoginClicked()
     
     MyServer->MoveConnect(packet);
     SetVisibility(ESlateVisibility::Hidden);
+
+    ACustomPlayerController* PC =
+        Cast<ACustomPlayerController>(GetWorld()->GetFirstPlayerController());
+    PC->ShowRoomUI();
     UE_LOG(LogTemp, Error, TEXT("OnLoginClicked"));
 }
 

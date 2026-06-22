@@ -151,7 +151,7 @@ public:
 
     void WhosGunCompoToTrash(int32 itemidCard);
     void AttachGunCompo(int32 itemidCard, AActor* weaponCompo);
-    void AddWeaponCompoBox(int32 itemId, AActor* actor, int32 ItemSpanwID);
+    
 
     void ActiveSecondWeaponToPlayer(AActor* actor);
     int32 GetItemIndexFromActor(AActor* TargetActor);

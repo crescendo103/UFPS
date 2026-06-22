@@ -15,6 +15,7 @@
  * 
  */
 class AHelicopter;
+class UGameConfigData2;
 
 UCLASS()
 class FPS_API UPawnManager : public ULocalPlayerSubsystem
@@ -23,6 +24,7 @@ class FPS_API UPawnManager : public ULocalPlayerSubsystem
 	
 
 public: 
+	void Init(UGameConfigData2* Config2);
 	void RegisterPlayer(AMyCharacter* player);
 	void PossesHelicopter();
 	void PossesLocalPlayer();
