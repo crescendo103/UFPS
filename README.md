@@ -111,13 +111,11 @@ Client/
 
 ```
 Server/
-├── Source/
-│   ├── GameMode/          # 게임 모드, 라운드 로직
-│   ├── PlayerState/       # 점수, 전적 등 상태 관리
-│   ├── Network/           # 세션, 매치메이킹
-│   └── Database/          # DB 연동 로직 (사용 시)
-└── README.md
-```
+├── 소스.cpp(main)                    # 소켓 통신 연결
+│   ├── AIEnemyPositionManager.h,cpp  # CSV파일에 존재하는 임의의 좌표값 읽기(AI 목표 위치 설정에 사용)
+│   ├── SessionManager.h              # GameSession이 생성되기 전 즉 게임이 시작되기전 로비에서 처리 로직
+│   ├── GameSession.h,cpp             # 게임에 대한 패킷처리
+└── Common.h                          # 구조체, 변수 선언
 
 [⬆ 목차로 돌아가기](#-목차)
 
