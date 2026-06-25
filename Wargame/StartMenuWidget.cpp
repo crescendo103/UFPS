@@ -15,6 +15,11 @@ void UStartMenuWidget::NativeConstruct()
 	{
 		StartButton->OnClicked.AddDynamic(this, &UStartMenuWidget::OnStartClicked);
 	}
+
+	if (TitleTitleText)
+	{
+		TitleTitleText->SetVisibility(ESlateVisibility::Hidden);
+	}
 }
 
 void UStartMenuWidget::SetStartMenuPawn(AStartMenuPawn* pawn)
@@ -34,7 +39,7 @@ void UStartMenuWidget::UpdateTitleText(bool state)
 {
 	if (TitleTitleText)
 	{
-		TitleTitleText->SetIsEnabled(state);
+		TitleTitleText->SetVisibility(state ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
 	}
 }
 

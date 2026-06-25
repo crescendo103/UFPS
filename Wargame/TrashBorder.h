@@ -1,49 +1,25 @@
 // Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "InventoryDropTargetBase.h"
 #include "TrashBorder.generated.h"
 
 /**
- * 
+ *
  */
 class UBorder;
-class UMyInventory;
+class UMyDragDropOperation;
 
 UCLASS()
-class FPS_API UTrashBorder : public UUserWidget
+class FPS_API UTrashBorder : public UInventoryDropTargetBase
 {
-	GENERATED_BODY()
-	
+    GENERATED_BODY()
 
 public:
-    virtual bool NativeOnDrop(
-        const FGeometry& InGeometry,
-        const FDragDropEvent& InDragDropEvent,
-        UDragDropOperation* InOperation) override;
-
-    virtual void NativeOnDragEnter(
-        const FGeometry& InGeometry,
-        const FDragDropEvent& InDragDropEvent,
-        UDragDropOperation* InOperation) override;
-
-    virtual void NativeOnDragLeave(
-        const FDragDropEvent& InDragDropEvent,
-        UDragDropOperation* InOperation) override;
-
-    virtual bool NativeOnDragOver(
-        const FGeometry& InGeometry,
-        const FDragDropEvent& InDragDropEvent,
-        UDragDropOperation* InOperation) override;
-    
-
     UPROPERTY(meta = (BindWidget))
     UBorder* TrashBorder;
 
-    void SetOwnerInventory(UMyInventory* InInventory);
-
-    UPROPERTY()
-    UMyInventory* OwnerInventory;
+protected:
+    virtual bool OnItemDropped(UMyDragDropOperation* DragOp) override;
 };

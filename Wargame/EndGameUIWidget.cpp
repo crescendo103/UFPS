@@ -46,7 +46,8 @@ void UEndGameUIWidget::PlaySequence()
 
 void UEndGameUIWidget::OnMainMenuClicked()
 {
-	//UGameplayStatics::OpenLevel(this, FName("MainMenu"));
+	APlayerController* PC = GetOwningPlayer();
+	UKismetSystemLibrary::QuitGame(this, PC, EQuitPreference::Quit, false);
 }
 
 void UEndGameUIWidget::UpdateEndGameUI(FString WinLoseText, FString KillerName)

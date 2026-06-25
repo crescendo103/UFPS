@@ -14,6 +14,7 @@
 #include "MinimapCaptureActor.h"
 #include "EndGameUIWidget.h"
 #include "RoomWidget.h"
+#include "AudioManager.h"
 
 UkillAccountWidget* ACustomPlayerController::GetDeathWidget()
 {
@@ -45,6 +46,7 @@ void ACustomPlayerController::BeginPlay()
         return;
     
     //지울요망
+    /*
     if (ConfigData)
     {
         UMyServer* Server = GetGameInstance()->GetSubsystem<UMyServer>();
@@ -53,7 +55,7 @@ void ACustomPlayerController::BeginPlay()
             Server->Init(ConfigData);
         }
     }
-
+    */
     if (StartMenuWidgetClass)
     {
         StartingMenuWidget = CreateWidget<UStartMenuWidget>(
@@ -202,6 +204,11 @@ void ACustomPlayerController::BeginPlay()
         RoomWidget->SetVisibility(ESlateVisibility::Hidden);
     }
 
+
+    UAudioManager* AudioMgr = GetGameInstance()->GetSubsystem<UAudioManager>();
+    if (AudioMgr) {
+        AudioMgr->PlayIntroBGM();
+    }
 }
 
 
@@ -252,9 +259,9 @@ void ACustomPlayerController::SetTextTime(int time)
 
             SetInputMode(InputMode);
             bShowMouseCursor = true;
-            /*
+            
             PM->SpawnHeli();//헬기 여기요
-            */
+            
 
             return;
         }
@@ -294,8 +301,8 @@ void ACustomPlayerController::SpawnAndPossessMyCharacter()
 
     if (CurrentPawn)
     {
-        //FVector NewLocation = FVector(1000, 500, 200); // 이동할 위치
-        FVector NewLocation = FVector(15386.461119, -42848.227375, 550.232971); // 이동할 위치
+        FVector NewLocation = FVector(-130140.0, -2460.0, 460.0); // 이동할 위치
+        //FVector NewLocation = FVector(15386.461119, -42848.227375, 550.232971); // 이동할 위치
         CurrentPawn->SetActorLocation(NewLocation);
 
         UE_LOG(LogTemp, Warning, TEXT("Pawn moved to: %s"), *NewLocation.ToString());

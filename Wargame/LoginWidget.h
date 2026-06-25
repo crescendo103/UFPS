@@ -28,6 +28,9 @@ public:
 	UPROPERTY(meta = (BindWidget))
 	UButton* LoginButton;
 
+	UPROPERTY(meta = (BindWidget))
+	UImage* HandImg;
+
 	UFUNCTION()
 	void OnLoginClicked();
 

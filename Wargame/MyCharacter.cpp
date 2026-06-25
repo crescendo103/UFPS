@@ -142,8 +142,9 @@ void AMyCharacter::BeginPlay()
     }
     bIsStanding = true;
     bIsInAir = false;    
-    
+    bIsHanging = true;
     CurrentHp = 100;
+
     MyServer = GetGameInstance()->GetSubsystem<UMyServer>();
     if (MyServer) {        
         MyServer->SetRocalPlayer(this);
@@ -226,6 +227,8 @@ void AMyCharacter::OnRep_Controller()
     InitScreenCenter();
 }*/
 
+
+
 void AMyCharacter::InitScreenCenter()
 {
     int32 ViewportX;
@@ -290,6 +293,14 @@ void AMyCharacter::CameraLineTrace()
         );
     }
     int32 a = 0;
+}
+
+void AMyCharacter::ClearSubWeapon()
+{
+    isSubWeaponActive = false;
+    SubItemData = FSubItemData(); // SubItemClass = nullptr, Id = 0
+
+    UE_LOG(LogTemp, Warning, TEXT("ClearSubWeapon called"));
 }
 
 void AMyCharacter::InventoryActive()
@@ -458,11 +469,11 @@ void AMyCharacter::PossessedBy(AController* NewController)
     
     PM = LP->GetSubsystem<UPawnManager>();
     if (!PM) return;
-    /*
+    
     PM->RegisterPlayer(this);
     PM->SetHeliClass(HeliClass);
     PM->SetParachuteClass(ParachuteClass);
-    */
+    
     // 🔥 추가
     UEnhancedInputLocalPlayerSubsystem* Subsystem = LP->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
 
@@ -643,6 +654,15 @@ void AMyCharacter::Die(int32 CauserCharacterId)
 
     DisableInput(controller);
     
+    // ===== 마우스 커서 보이게 + UI 입력 받게 설정 =====
+    FInputModeGameAndUI InputMode;
+    InputMode.SetHideCursorDuringCapture(false);
+    InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+    controller->SetInputMode(InputMode);
+    controller->bShowMouseCursor = true;
+    // ================================================
+
+    controller->HiddenInformationText();
     UEndGameUIWidget* EndGameUI = controller->GetUEndGameUIWidget();
     UkillAccountWidget* Widget = controller->GetDeathWidget();
 

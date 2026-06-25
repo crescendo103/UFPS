@@ -23,4 +23,6 @@ protected:
 	class UGameConfigData* ConfigData;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Config")
 	class UGameConfigData2* ConfigData2;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Config")
+	class UGameConfigData3* ConfigData3;
 };

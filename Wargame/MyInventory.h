@@ -157,4 +157,23 @@ public:
     int32 GetItemIndexFromActor(AActor* TargetActor);
     AActor* GetActorFromSlot(int32 SlotIndex);
 
+    void ClearSubWeaponIfMatches(int32 itemSpawnID);
+
+    // ===== 새로 추가: 공통 헬퍼 =====
+protected:
+    // 위젯 생성 + Init + Slots 등록까지 공통 처리. 실패 시 nullptr.
+    // bRegisterSlot=false면 Slots 맵에 등록하지 않음(바닥 아이템처럼 슬롯 개념이 없는 경우)
+    UMyItem* CreateAndRegisterSlotWidget(
+        int32 SlotIndex,
+        int32 ItemId,
+        AActor* Actor,
+        int32 ItemSpawnID,
+        bool bRegisterSlot = true
+    );
+
+    // SizeBox 계열(WeaponBox, WeaponBoxPlayer)에 단일 위젯을 끼워 넣는 공통 처리
+    void AttachWidgetToSizeBox(USizeBox* Box, UMyItem* SlotWidget);
+
+    // ScrollBox 계열(HaveItemBox, FloorItemBox)에 위젯을 추가하는 공통 처리
+    void AttachWidgetToScrollBox(UScrollBox* Scroll, UMyItem* SlotWidget);
 };

@@ -224,12 +224,12 @@ public:
     void ChangeLook();
     void ChangeFirstWeapon();
     void ChangeSecondWeapon();
-    void MouseWheel(const FInputActionValue& Value);
-    
-    
+    void MouseWheel(const FInputActionValue& Value);    
+   
     void InitScreenCenter();
     void CameraLineTrace();
 
+    void ClearSubWeapon();
     void InventoryActive();
     void InterActionRayCast();
    

@@ -4,6 +4,7 @@
 #include "LoginWidget.h"
 #include "MyServer.h"
 #include "CustomPlayerController.h"
+#include "AudioManager.h"
 
 
 void ULoginWidget::NativeConstruct()
@@ -23,6 +24,8 @@ void ULoginWidget::NativeConstruct()
 
     LoginButton->SetRenderOpacity(0.0f); // 완전 투명
     NameTextBox->SetRenderOpacity(0.0f);
+    HandImg->SetColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 0.0f)); // Alpha=0
+
 }
 
 
@@ -48,6 +51,12 @@ void ULoginWidget::OnLoginClicked()
     ACustomPlayerController* PC =
         Cast<ACustomPlayerController>(GetWorld()->GetFirstPlayerController());
     PC->ShowRoomUI();
+
+    UAudioManager* AudioMgr = GetGameInstance()->GetSubsystem<UAudioManager>();
+    if (AudioMgr) {
+        AudioMgr->PlayMenuBGM();
+    }
+
     UE_LOG(LogTemp, Error, TEXT("OnLoginClicked"));
 }
 

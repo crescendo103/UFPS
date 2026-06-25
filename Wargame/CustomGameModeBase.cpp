@@ -7,6 +7,7 @@
 #include "GameConfigData2.h"
 #include "GameFramework/GameUserSettings.h"
 #include "PawnManager.h"
+#include "AudioManager.h"
 
 ACustomGameModeBase::ACustomGameModeBase()
 {
@@ -35,6 +36,15 @@ void ACustomGameModeBase::BeginPlay()
             }
         }
     }
+
+    if (ConfigData3)
+    {      
+        UAudioManager* AudioMgr = GetGameInstance()->GetSubsystem<UAudioManager>();
+        if (AudioMgr) {
+            AudioMgr->Init(ConfigData3);
+        }
+    }
+
 
     if (UGameUserSettings* Settings = GEngine->GetGameUserSettings())
     {

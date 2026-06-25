@@ -2,6 +2,7 @@
 
 
 #include "HeliAIController.h"
+#include "AudioManager.h"
 
 AHeliAIController::AHeliAIController()
 {
@@ -12,6 +13,11 @@ AHeliAIController::AHeliAIController()
 void AHeliAIController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
+
+	UAudioManager* AudioMgr = GetGameInstance()->GetSubsystem<UAudioManager>();
+	if (AudioMgr) {
+		AudioMgr->PlayGameBGM();
+	}
 
 	StartBehaviorTree();
 }
