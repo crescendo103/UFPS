@@ -62,20 +62,26 @@
 | 입력 | Enhanced Input System |
 | 네트워크 동기화 | Replication, RPC |
 
-### 폴더 구조
+### 주요 클라 구조
 
 ```
 Client/
-├── Source/
-│   ├── Character/        # 플레이어 캐릭터, 무브먼트
-│   ├── Weapon/            # 무기 베이스 및 개별 무기 클래스
-│   ├── UI/                # HUD, 위젯 관련
-│   └── Animation/         # AnimInstance, Notify
-├── Content/
-│   ├── Characters/
-│   ├── Weapons/
-│   ├── Maps/
-│   └── UI/
+├── MyCharacter/ # 플레이어
+│   ├── GrenadeThrowCalculateCompo/        # 수류탄 날아가는 궤적 계산하는 컴포넌트
+│   ├── CurrentWeapon /            # 현재 들고있는 무기 종류(Enum)
+│   ├── CurrentGunWeapon /                # 현재 들고있는 무기 액터
+│   └── SceneCaptureComponent2D/         # 미니맵 렌더링
+├── WeaponActor/ # 무기
+│   ├── WeaponUseComponent/ # 무기마다 스폰할 총알 로직 컴포넌트 (산탄총이면 총알을 여러개 스폰, 소총은 단발로 하나씩 스폰)
+│   ├── EffectComponent/ # VFX, SFX 효과 연출 컴포넌트
+│   ├── 
+│   └── 
+├── MyInventory/ # 인벤토리(아래는 다 UserWidget)
+│   ├── FloorItemBox/ # 플레이어와 가까운 거리에 있는 WeaponActor 표시
+│   ├── HaveWidget/ # 플레이어가 소유하고 있는 WeaponActor 표시
+│   ├── WeaponBoxPlayerWidget # 플레이어의 주무기에 해당하는 WeaponActor 표시
+│   └── WeaponBoxWidget # 플레이어의 보조무기(수류탄)에 해당하는 WeaponActor 표시
+│   └── TrashWidget # 드래그 드랍하여 WeaponActor를 버리는 UI 표시
 └── README.md
 ```
 
@@ -103,7 +109,7 @@ Client/
 - **AI 이동 처리**: `AIEnemyPositionManager`가 CSV로 미리 저장된 NavMesh 좌표들을 읽어, AI가 목적지에 도착(`IsJump`)하면 다음 랜덤 목적지를 큐에서 꺼내 갱신
 - **DB 연동**: 미사용 (현재 유저 정보/전적/랭킹은 서버 메모리 상에서만 관리)
 
-### 폴더 구조
+### 서버 구조
 
 ```
 Server/
