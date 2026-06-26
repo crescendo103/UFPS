@@ -92,7 +92,7 @@ Client/
 
 ### 주요 기능
 
-- **서버 구조**: 서버 데이터 처리용 쓰레드 1개(ProcessThread), N(클라이언트 수, 수신용), N(클라이언트 수, 송신용)로 구성됨
+- **서버 구조**: 서버 데이터 처리용 쓰레드 1(ProcessThread), N(클라이언트 수, 수신용), 1(SendLoop, 송신용)로 구성됨
 - **게임 로비(게임시작 전)**: `SessionManager`가 로비 클라이언트 목록을 관리하며, `CreateRoom` / `JoinRoom` / `StartGame` / `RemoveRoom` 패킷을 처리해 방 단위로 `GameSession`을 생성하고 배정
 - **게임 로직 동기화**: 클라이언트로부터 받은 캐릭터 위치, 총알, 근접 공격, 수류탄, 사망 판정 등을 서버가 받아 큐에 적재 후 일괄 브로드캐스트
 - **패킷 전송**: `GameSession::SendLoop()`에서 8ms 주기로 캐릭터 위치, 총알, 차량, 수류탄, AI, 타이머, 사망, 아이템 정보를 각 방에 접속한 클라이언트들에게 전송
@@ -108,6 +108,3 @@ Server/
 │   ├── SessionManager.h              # GameSession이 생성되기 전 즉 게임이 시작되기전 로비에서 처리 로직
 │   ├── GameSession.h,cpp             # 게임에 대한 패킷처리
 └── Common.h                          # 구조체, 변수 선언
-
-[⬆ 목차로 돌아가기](#-목차)
-
