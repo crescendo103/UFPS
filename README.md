@@ -89,8 +89,9 @@ Client/
 
 (Winsock)소켓 기반의 서버입니다. 클라이언트와 직접 TCP 소켓으로 통신하며 패킷 구조체를 정의해 송수신합니다.
 로비 → 방 생성/참가 → 게임 시작 흐름을 직접 구현했고, 캐릭터 위치・총알・수류탄・아이템・차량 등의 동기화와 AI 이동 로직을 서버에서 처리합니다.
+
 <p align="center">
-<img width="731" height="496" alt="서버 구조도" src="https://github.com/user-attachments/assets/cba3c098-0ef9-458f-a768-1d489ed86694" />
+<img width="933" height="593" alt="서버 구조도" src="https://github.com/user-attachments/assets/972f68e5-693e-4cc8-8eb4-03c20352dd06" />
 </p>
 
 ### 주요 기능
