@@ -99,16 +99,6 @@ Client/
 - **AI 이동 처리**: `AIEnemyPositionManager`가 CSV로 미리 저장된 NavMesh 좌표들을 읽어, AI가 목적지에 도착(`IsJump`)하면 다음 랜덤 목적지를 큐에서 꺼내 갱신
 - **DB 연동**: 미사용 (현재 유저 정보/전적/랭킹은 서버 메모리 상에서만 관리)
 
-### 기술 스택
-
-| 분류 | 사용 기술 |
-|---|---|
-| 엔진 | Unreal Engine 5.x (Dedicated Server Build) |
-| 언어 | C++ |
-| 네트워크 | Unreal Replication, Steam Online Subsystem 등 |
-| 데이터베이스 | (사용한다면 MySQL / MongoDB 등 기입) |
-| 배포 환경 | (AWS, 온프레미스 등 기입) |
-
 ### 폴더 구조
 
 ```
@@ -121,21 +111,3 @@ Server/
 
 [⬆ 목차로 돌아가기](#-목차)
 
-<br>
-
----
-
-## 🚀 실행 방법
-
-```bash
-# 1. 저장소 클론
-git clone https://github.com/username/repo-name.git
-
-# 2. .uproject 파일 우클릭 -> Generate Visual Studio project files
-
-# 3. 엔진 버전 확인 후 빌드 (Development Editor)
-```
-
-서버 실행 시 별도 빌드/실행 절차가 있다면 여기에 작성하세요.
-
-<br>
