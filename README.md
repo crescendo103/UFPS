@@ -17,7 +17,7 @@
 - [🖥️ 서버 (Server)](#️-서버-server)
   - [주요 기능](#주요-기능-1)
   - [서버 구조](#서버-구조)
-- [🚀 실행 영상](#-실행-방법)
+- [🚀 실행 영상 & 기술 문서](#-실행-영상--기술-문서)
 
 <br>
 
@@ -107,6 +107,14 @@ Server/
 │   ├── GameSession.h,cpp             # 게임에 대한 패킷처리
 └── Common.h                          # 구조체, 변수 선언
 
-### 실행 영상, 기술 문서
-https://youtu.be/pb_JKvnfxuQ
-[기술문서.pdf](https://github.com/user-attachments/files/29489303/default.pdf)
+```
+
+## 🚀 실행 영상 & 기술 문서
+ 
+| 항목 | 링크 |
+|---|---|
+| 🎬 실행 영상 | [YouTube에서 보기](https://youtu.be/pb_JKvnfxuQ) |
+| 📄 기술 문서 | [기술문서.pdf 다운로드]([기술문서.pdf](https://github.com/user-attachments/files/29489445/default.pdf)
+) |
+ 
+[⬆ 목차로 돌아가기](#-목차)
