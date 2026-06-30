@@ -115,6 +115,6 @@ Server/
 |---|---|
 | 🎬 실행 영상 | [YouTube에서 보기](https://youtu.be/pb_JKvnfxuQ) |
 | 📄 기술 문서 | [기술문서.pdf](https://github.com/user-attachments/files/29489445/default.pdf)
-) |
+
  
 [⬆ 목차로 돌아가기](#-목차)
