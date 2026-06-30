@@ -1,4 +1,4 @@
-# 🎯 [SS] - Unreal Engine FPS 게임
+# 🎯 [UFPS] - Unreal Engine FPS 게임
 
 > 배틀그라운드 모티브 1v1 팀 데스매치 기반의 멀티플레이어 FPS 게임
 
@@ -106,3 +106,7 @@ Server/
 │   ├── SessionManager.h              # GameSession이 생성되기 전 즉 게임이 시작되기전 로비에서 처리 로직
 │   ├── GameSession.h,cpp             # 게임에 대한 패킷처리
 └── Common.h                          # 구조체, 변수 선언
+
+### 실행 영상, 기술 문서
+https://youtu.be/pb_JKvnfxuQ
+[기술문서.pdf](https://github.com/user-attachments/files/29489303/default.pdf)
